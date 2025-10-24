@@ -1,10 +1,13 @@
 [build-system]
-requires = ["setuptools>=42", "setuptools-scm[toml]>=6.2"]
+requires = ["setuptools>=64.0.0", "setuptools-scm[toml]>=8.0.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "morph_spines"
 dependencies = [
+    'h5py>=3.10.0',
+    'trimesh>=4.0.0',
+    'neurom>=4.0.4'
 ]
 authors = [
     {name = "Judit Planas", email = "judit.planas@openbraininstitute.org"}
