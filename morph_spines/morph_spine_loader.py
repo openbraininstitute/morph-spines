@@ -34,9 +34,9 @@ def load_morphology_with_spines(
     spine_table = pandas.read_hdf(morphology_fn, key=GRP_EDGES + "/" + morphology_name)
     coll = morphio.Collection(morphology_fn)
     centered_spine_skeletons = neurom_load_morphology(
-        coll.load(GRP_SPINES + "/" + GRP_SKELETONS + "/" + morphology_name)
+        coll.load(f"{GRP_SPINES}/{GRP_SKELETONS}/{morphology_name}")
     )
-    smooth_morphology = coll.load(GRP_MORPH + "/" + morphology_name)
+    smooth_morphology = coll.load(f"{GRP_MORPH}/{morphology_name}")
     return MorphologyWithSpines(
         morphology_fn,
         morphology_name,
@@ -64,7 +64,7 @@ def load_morphology(filepath, name=None, process_subtrees=False):
             raise ValueError(f"Morphology {name} not found in file")
 
     coll = morphio.Collection(filepath)
-    morphology = coll.load(GRP_MORPH + "/" + name)
+    morphology = coll.load(f"{GRP_MORPH}/{name}")
     return Morphology(morphology, name, process_subtrees=process_subtrees)
 
 def load_spines(filepath, name=None, spines_are_centered=True, process_subtrees=False):
@@ -83,10 +83,10 @@ def load_spines(filepath, name=None, spines_are_centered=True, process_subtrees=
         if name not in lst_morph_names:
             raise ValueError(f"Morphology {name} not found in file!")
 
-    spine_table = pandas.read_hdf(filepath, key=GRP_EDGES + "/" + name)
+    spine_table = pandas.read_hdf(filepath, key=f"{GRP_EDGES}/{name}")
     coll = morphio.Collection(filepath)
     centered_spine_skeletons = neurom_load_morphology(
-        coll.load(GRP_SPINES + "/" + GRP_SKELETONS + "/" + name)
+        coll.load(f"{GRP_SPINES}/{GRP_SKELETONS}/{name}")
     )
     return Spines(
         filepath,
