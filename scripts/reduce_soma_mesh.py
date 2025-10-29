@@ -3,11 +3,12 @@
 import h5py
 import numpy as np
 import open3d as o3d
-import os
+from pathlib import Path
 
-input_file = "morphology_with_spines.h5"
-base, ext = input_file.rsplit(".", 1)
-output_file = base + "_temp." + ext
+input_file = Path("./data/morphology_with_spines/morphology_with_spines.obj")
+output_dir = Path(f"{input_file.parent}/output")
+output_dir.mkdir(exist_ok=True)
+output_file = Path(f"{output_dir}/{input_file.stem}_simplified{input_file.suffix}")
 
 # Triangle scaling factor
 scale_factor = 0.1
@@ -59,6 +60,4 @@ with h5py.File(input_file, "r") as f_in, h5py.File(output_file, "w") as f_out:
                     mesh_group_new.create_dataset("vertices", data=vertices_simpl)
                     mesh_group_new.create_dataset("triangles", data=triangles_simpl)
 
-# Replace original file with new output
-os.replace(output_file, input_file)
-print("Selected meshes simplified and file size reduced.")
+print("Selected meshes simplified and file size reduced")

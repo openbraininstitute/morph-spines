@@ -1,10 +1,12 @@
 # Given an .obj mesh file, reduce the given mesh down to 10% of the original size
 
 import open3d as o3d
+from pathlib import Path
 
-input_file = "./data/morphology_meshes/864691134884740346.obj"
-base, ext = input_file.rsplit(".", 1)
-output_file = base + "_1." + ext
+input_file = Path("./data/morphology_meshes/morphology_mesh.obj")
+output_dir = Path(f"{input_file.parent}/output")
+output_dir.mkdir(exist_ok=True)
+output_file = Path(f"{output_dir}/{input_file.stem}_simplified{input_file.suffix}")
 
 # Triangle scaling factor
 scale_factor = 0.1
@@ -29,9 +31,8 @@ simplified.compute_vertex_normals()
 print(f"Simplified mesh: {len(simplified.vertices)} vertices, {len(simplified.triangles)} faces")
 
 # Save the result
-output_path = "./data/morphology_meshes/neuron_simplified.obj"
-o3d.io.write_triangle_mesh(output_path, simplified)
-print(f"Simplified mesh saved to {output_path}")
+o3d.io.write_triangle_mesh(output_file, simplified)
+print(f"Simplified mesh saved to {output_file}")
 
 # If in an ipython notebook, show the mesh
 #simplified.show()
