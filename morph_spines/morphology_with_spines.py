@@ -12,25 +12,26 @@ from scipy.spatial.transform import Rotation
 
 from neurom.core.morphology import Morphology
 
-# Columns of edge table dataframes
-_C_SPINE_MESH = "spine_morphology"
-_C_SPINE_ID = "spine_id"
-_C_ROTATION = ["spine_rotation_x", "spine_rotation_y", "spine_rotation_z", "spine_rotation_w"]
-_C_TRANSLATION = ["afferent_surface_x", "afferent_surface_y", "afferent_surface_z"]
-_C_AFF_SEC = "afferent_section_id"
-
-
 # Names of groups in the morphology-w-spines hdf5 file
+# Top-level groups
 GRP_EDGES = "edges"
 GRP_MORPH = "morphology"
+GRP_SOMA = "soma"
 GRP_SPINES = "spines"
+# Sub-groups
 GRP_MESHES = "meshes"
 GRP_SKELETONS = "skeletons"
-GRP_SOMA = "soma"
-GRP_VERTICES = "vertices"
-GRP_TRIANGLES = "triangles"
+# Sub-sub-groups inside meshes
 GRP_OFFSETS = "offsets"
+GRP_TRIANGLES = "triangles"
+GRP_VERTICES = "vertices"
 
+# Columns of edge table dataframes
+COL_SPINE_MESH = "spine_morphology"
+COL_SPINE_ID = "spine_id"
+COL_ROTATION = ["spine_rotation_x", "spine_rotation_y", "spine_rotation_z", "spine_rotation_w"]
+COL_TRANSLATION = ["afferent_surface_x", "afferent_surface_y", "afferent_surface_z"]
+COL_AFF_SEC = "afferent_section_id"
 
 class MorphologyWithSpines(Morphology):
     """Represents spiny neuron morphology.
@@ -79,8 +80,8 @@ class MorphologyWithSpines(Morphology):
         (origin near its root, y-axis pointing towards its tip) to the
         global coordinate system of the neuron.
         """
-        rot = Rotation.from_quat(self.spine_table.loc[i, _C_ROTATION].to_numpy(dtype=float))
-        tf = self.spine_table.loc[i, _C_TRANSLATION].to_numpy(dtype=float)
+        rot = Rotation.from_quat(self.spine_table.loc[i, COL_ROTATION].to_numpy(dtype=float))
+        tf = self.spine_table.loc[i, COL_TRANSLATION].to_numpy(dtype=float)
         return rot, tf
 
     def transform_for_spine(self, i, pts):
@@ -128,8 +129,8 @@ class MorphologyWithSpines(Morphology):
         The points (i.e., vertices) of the meshes describing the shape of
         individual spines.
         """
-        _spine_mesh_grp = self.spine_table.loc[i, _C_SPINE_MESH]
-        _spine_id = int(self.spine_table.loc[i, _C_SPINE_ID])
+        _spine_mesh_grp = self.spine_table.loc[i, COL_SPINE_MESH]
+        _spine_id = int(self.spine_table.loc[i, COL_SPINE_ID])
         with h5py.File(self._fn, "r") as h5:
             grp = h5[GRP_SPINES][GRP_MESHES][_spine_mesh_grp]  # [_spine_id_grp]
             fr_v = grp[GRP_OFFSETS][_spine_id, 0]
@@ -146,8 +147,8 @@ class MorphologyWithSpines(Morphology):
         The triangles (i.e., faces) of the meshes describing the shape of
         individual spines.
         """
-        _spine_mesh_grp = self.spine_table.loc[i, _C_SPINE_MESH]
-        _spine_id = int(self.spine_table.loc[i, _C_SPINE_ID])
+        _spine_mesh_grp = self.spine_table.loc[i, COL_SPINE_MESH]
+        _spine_id = int(self.spine_table.loc[i, COL_SPINE_ID])
         with h5py.File(self._fn, "r") as h5:
             grp = h5[GRP_SPINES][GRP_MESHES][_spine_mesh_grp]  # [_spine_id_grp]
             fr_v = grp[GRP_OFFSETS][_spine_id, 1]
@@ -205,7 +206,7 @@ class MorphologyWithSpines(Morphology):
         Returns the rows of the .spine_table for spines located on the
         specified section.
         """
-        return self.spine_table.loc[self.spine_table[_C_AFF_SEC] == sec_id]
+        return self.spine_table.loc[self.spine_table[COL_AFF_SEC] == sec_id]
 
     def spine_meshes_for_section(self, sec_id):
         """Spine meshes for a given section
@@ -325,8 +326,8 @@ class SpinesOnly:
         (origin near its root, y-axis pointing towards its tip) to the
         global coordinate system of the neuron.
         """
-        rot = Rotation.from_quat(self.spine_table.loc[i, _C_ROTATION].to_numpy(dtype=float))
-        tf = self.spine_table.loc[i, _C_TRANSLATION].to_numpy(dtype=float)
+        rot = Rotation.from_quat(self.spine_table.loc[i, COL_ROTATION].to_numpy(dtype=float))
+        tf = self.spine_table.loc[i, COL_TRANSLATION].to_numpy(dtype=float)
         return rot, tf
 
     def transform_for_spine(self, i, pts):
@@ -374,8 +375,8 @@ class SpinesOnly:
         The points (i.e., vertices) of the meshes describing the shape of
         individual spines.
         """
-        _spine_mesh_grp = self.spine_table.loc[i, _C_SPINE_MESH]
-        _spine_id = int(self.spine_table.loc[i, _C_SPINE_ID])
+        _spine_mesh_grp = self.spine_table.loc[i, COL_SPINE_MESH]
+        _spine_id = int(self.spine_table.loc[i, COL_SPINE_ID])
         with h5py.File(self._fn, "r") as h5:
             grp = h5[GRP_SPINES][GRP_MESHES][_spine_mesh_grp]  # [_spine_id_grp]
             fr_v = grp[GRP_OFFSETS][_spine_id, 0]
@@ -392,8 +393,8 @@ class SpinesOnly:
         The triangles (i.e., faces) of the meshes describing the shape of
         individual spines.
         """
-        _spine_mesh_grp = self.spine_table.loc[i, _C_SPINE_MESH]
-        _spine_id = int(self.spine_table.loc[i, _C_SPINE_ID])
+        _spine_mesh_grp = self.spine_table.loc[i, COL_SPINE_MESH]
+        _spine_id = int(self.spine_table.loc[i, COL_SPINE_ID])
         with h5py.File(self._fn, "r") as h5:
             grp = h5[GRP_SPINES][GRP_MESHES][_spine_mesh_grp]  # [_spine_id_grp]
             fr_v = grp[GRP_OFFSETS][_spine_id, 1]
@@ -451,7 +452,7 @@ class SpinesOnly:
         Returns the rows of the .spine_table for spines located on the
         specified section.
         """
-        return self.spine_table.loc[self.spine_table[_C_AFF_SEC] == sec_id]
+        return self.spine_table.loc[self.spine_table[COL_AFF_SEC] == sec_id]
 
     def spine_meshes_for_section(self, sec_id):
         """Spine meshes for a given section
