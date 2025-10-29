@@ -5,5 +5,5 @@ __version__ = version(__package__)
 
 from neurom.io.utils import MorphLoader, load_morphologies, load_morphology
 
-from .morphology_with_spines import MorphologyWithSpines
-from .morph_spine_loader import load_morphology_with_spines
+from .morphology_with_spines import MorphologyWithSpines, SpinesOnly
+from .morph_spine_loader import load_morphology_with_spines, load_morphology, load_spines

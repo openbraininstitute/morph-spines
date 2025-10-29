@@ -6,8 +6,6 @@ neuron morphology with individual spines.
 
 import h5py
 import trimesh
-import neurom
-
 from scipy.spatial.transform import Rotation
 
 from neurom.core.morphology import Morphology
@@ -266,27 +264,6 @@ class MorphologyWithSpines(Morphology):
         """Returns the mesh (as a trimesh.Trimesh) of the neuron soma."""
         tm = trimesh.Trimesh(vertices=self.soma_mesh_points, faces=self.soma_mesh_triangles)
         return tm
-
-
-class MorphologyOnly(Morphology):
-    """Represents spiny neuron morphology, only the morphology part.
-    """
-
-    def __init__(
-        self,
-        morphology_name,
-        morphio_morphology,
-        process_subtrees=False,
-    ):
-        """Default constructor.
-
-        morph_spines.morph_spine_loader.load_morphology_only() intended for users.
-        """
-        super().__init__(
-            morphio_morphology, name=morphology_name, process_subtrees=process_subtrees
-        )
-        self.name = morphology_name
-
 
 class SpinesOnly:
     """Only the spines part of the morphology with spines format."""
