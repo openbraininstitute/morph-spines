@@ -265,8 +265,8 @@ class MorphologyWithSpines(Morphology):
         tm = trimesh.Trimesh(vertices=self.soma_mesh_points, faces=self.soma_mesh_triangles)
         return tm
 
-class SpinesOnly:
-    """Only the spines part of the morphology with spines format."""
+class Spines:
+    """Represents the spines part and the meshes of the morphology with spines format."""
     def __init__(
             self,
             meshes_filename,
@@ -278,7 +278,7 @@ class SpinesOnly:
     ):
         """Default constructor.
 
-        morph_spines.morph_spine_loader.load_spines_only() intended for users.
+        morph_spines.morph_spine_loader.load_spines() intended for users.
         """
         self._fn = meshes_filename
         self.name = morphology_name

@@ -11,7 +11,7 @@ from .morphology_with_spines import (
     GRP_SPINES,
     GRP_SKELETONS,
     MorphologyWithSpines,
-    SpinesOnly
+    Spines
 )
 
 def load_morphology_with_spines(
@@ -88,7 +88,7 @@ def load_spines(filepath, name=None, spines_are_centered=True, process_subtrees=
     centered_spine_skeletons = neurom_load_morphology(
         coll.load(GRP_SPINES + "/" + GRP_SKELETONS + "/" + name)
     )
-    return SpinesOnly(
+    return Spines(
         filepath,
         name,
         spine_table,
