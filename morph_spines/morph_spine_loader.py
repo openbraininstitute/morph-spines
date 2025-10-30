@@ -49,7 +49,7 @@ def load_morphology_with_spines(
 
 def load_morphology(filepath, name=None, process_subtrees=False):
     """Load a neuron morphology from a neuron morphology with spines representation.
-    Loads the basic neuron morphology without its spines representation.
+    Loads the basic neuron morphology without its spine representation.
     Returns the representation of the neuron morphology.
     """
     with h5py.File(filepath, "r") as h5:
@@ -67,7 +67,7 @@ def load_morphology(filepath, name=None, process_subtrees=False):
     morphology = coll.load(f"{GRP_MORPH}/{name}")
     return Morphology(morphology, name, process_subtrees=process_subtrees)
 
-def load_spines(filepath, name=None, spines_are_centered=True, process_subtrees=False):
+def load_spines(filepath, name=None, spines_are_centered=True):
     """Load the spines from a neuron morphology with spines representation.
     Loads the spines of a 'neuron morphology with spines' from a hdf5 archive.
     Returns the representation of the spines.
@@ -89,10 +89,9 @@ def load_spines(filepath, name=None, spines_are_centered=True, process_subtrees=
         coll.load(f"{GRP_SPINES}/{GRP_SKELETONS}/{name}")
     )
     return Spines(
-        filepath,
         name,
+        filepath,
         spine_table,
         centered_spine_skeletons,
         spines_are_centered=spines_are_centered,
-        process_subtrees=process_subtrees,
     )
