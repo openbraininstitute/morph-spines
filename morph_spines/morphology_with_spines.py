@@ -78,18 +78,18 @@ class MorphologyWithSpines(Morphology):
         (origin near its root, y-axis pointing towards its tip) to the
         global coordinate system of the neuron.
         """
-        rot = Rotation.from_quat(self.spine_table.loc[spine_loc, COL_ROTATION].to_numpy(dtype=float))
-        tf = self.spine_table.loc[spine_loc, COL_TRANSLATION].to_numpy(dtype=float)
-        return rot, tf
+        spine_rotation = Rotation.from_quat(self.spine_table.loc[spine_loc, COL_ROTATION].to_numpy(dtype=float))
+        spine_transformation = self.spine_table.loc[spine_loc, COL_TRANSLATION].to_numpy(dtype=float)
+        return spine_rotation, spine_transformation
 
-    def transform_for_spine(self, spine_loc, pts):
+    def transform_for_spine(self, spine_loc, spine_points):
         """Apply spine coordinate system transformations.
 
         Apply the transformation from the local spine coordinate system
         to the global neuron coordinate system to a set of points.
         """
-        rot, tf = self.spine_transformations(spine_loc)
-        return rot.apply(pts) + tf.reshape((1, -1))
+        spine_rotation, spine_transformation = self.spine_transformations(spine_loc)
+        return spine_rotation.apply(spine_points) + spine_transformation.reshape((1, -1))
 
     def _transform_spine_skeletons(self):
         """Apply transformations to spine skeletons.
@@ -100,14 +100,14 @@ class MorphologyWithSpines(Morphology):
 
         spines = self._centered_spine_skeletons.to_morphio().as_mutable()
         assert len(spines.root_sections) == self.spine_table.shape[0]
-        for i, root_spine in enumerate(spines.root_sections):
+        for spine_idx, root_spine in enumerate(spines.root_sections):
             lst_in = [root_spine]
             while len(lst_in) > 0:
                 lst_out = []
-                for sec in lst_in:
-                    pts = self.transform_for_spine(i, sec.points)
-                    sec.points = pts
-                    lst_out.extend(sec.children)
+                for section in lst_in:
+                    spine_points = self.transform_for_spine(spine_idx, section.points)
+                    section.points = spine_points
+                    lst_out.extend(section.children)
                 lst_in = lst_out
         return Morphology(spines.as_immutable(), name=f"{self.name}_spines")
 
@@ -129,15 +129,15 @@ class MorphologyWithSpines(Morphology):
         """
         _spine_mesh_grp = self.spine_table.loc[spine_loc, COL_SPINE_MESH]
         _spine_id = int(self.spine_table.loc[spine_loc, COL_SPINE_ID])
-        with h5py.File(self._filepath, "r") as h5:
-            grp = h5[GRP_SPINES][GRP_MESHES][_spine_mesh_grp]  # [_spine_id_grp]
-            fr_v = grp[GRP_OFFSETS][_spine_id, 0]
-            to_v = grp[GRP_OFFSETS][_spine_id + 1, 0]
-            pts = grp[GRP_VERTICES][fr_v:to_v].astype(float)
+        with h5py.File(self._filepath, "r") as h5_file:
+            group = h5_file[GRP_SPINES][GRP_MESHES][_spine_mesh_grp]  # [_spine_id_grp]
+            vertex_start = group[GRP_OFFSETS][_spine_id, 0]
+            vertex_end = group[GRP_OFFSETS][_spine_id + 1, 0]
+            spine_points = group[GRP_VERTICES][vertex_start:vertex_end].astype(float)
 
         if not transform:
-            return pts
-        return self.transform_for_spine(spine_loc, pts)
+            return spine_points
+        return self.transform_for_spine(spine_loc, spine_points)
 
     def spine_mesh_triangles(self, spine_loc):
         """Triangles of spine mesh.
@@ -147,11 +147,11 @@ class MorphologyWithSpines(Morphology):
         """
         _spine_mesh_grp = self.spine_table.loc[spine_loc, COL_SPINE_MESH]
         _spine_id = int(self.spine_table.loc[spine_loc, COL_SPINE_ID])
-        with h5py.File(self._filepath, "r") as h5:
-            grp = h5[GRP_SPINES][GRP_MESHES][_spine_mesh_grp]  # [_spine_id_grp]
-            fr_v = grp[GRP_OFFSETS][_spine_id, 1]
-            to_v = grp[GRP_OFFSETS][_spine_id + 1, 1]
-            triangles = grp[GRP_TRIANGLES][fr_v:to_v].astype(int)
+        with h5py.File(self._filepath, "r") as h5_file:
+            group = h5_file[GRP_SPINES][GRP_MESHES][_spine_mesh_grp]  # [_spine_id_grp]
+            vertex_start = group[GRP_OFFSETS][_spine_id, 1]
+            vertex_end = group[GRP_OFFSETS][_spine_id + 1, 1]
+            triangles = group[GRP_TRIANGLES][vertex_start:vertex_end].astype(int)
         return triangles
 
     def spine_mesh_points(self, spine_loc):
@@ -176,8 +176,11 @@ class MorphologyWithSpines(Morphology):
         Returns the mesh (as a trimesh.Trimesh) of an individual spine.
         In global neuron coordinates.
         """
-        tm = trimesh.Trimesh(vertices=self.spine_mesh_points(spine_loc), faces=self.spine_mesh_triangles(spine_loc))
-        return tm
+        spine_mesh = trimesh.Trimesh(
+            vertices=self.spine_mesh_points(spine_loc),
+            faces=self.spine_mesh_triangles(spine_loc)
+        )
+        return spine_mesh
 
     def centered_spine_mesh(self, spine_loc):
         """Spine mesh representation - local.
@@ -185,10 +188,11 @@ class MorphologyWithSpines(Morphology):
         Returns the mesh (as a trimesh.Trimesh) of an individual spine.
         In local spine coordinates.
         """
-        tm = trimesh.Trimesh(
-            vertices=self.centered_mesh_points(spine_loc), faces=self.spine_mesh_triangles(spine_loc)
+        spine_mesh = trimesh.Trimesh(
+            vertices=self.centered_mesh_points(spine_loc),
+            faces=self.spine_mesh_triangles(spine_loc)
         )
-        return tm
+        return spine_mesh
 
     def spine_indices_for_section(self, section_id):
         """Indices of spines on a given section.
@@ -212,8 +216,8 @@ class MorphologyWithSpines(Morphology):
         Iterator that lists the meshes of spines located on the specified
         section.
         """
-        for idx in self.spine_indices_for_section(section_id):
-            yield self.spine_mesh(idx)
+        for spine_idx in self.spine_indices_for_section(section_id):
+            yield self.spine_mesh(spine_idx)
 
     def compound_spine_mesh_for_section(self, section_id):
         """Single spine mesh for a given section
@@ -228,8 +232,8 @@ class MorphologyWithSpines(Morphology):
         Iterator that lists the meshes of spines located on the specified
         section. Meshes are transformed to be centered and upright.
         """
-        for idx in self.spine_indices_for_section(section_id):
-            yield self.centered_spine_mesh(idx)
+        for spine_idx in self.spine_indices_for_section(section_id):
+            yield self.centered_spine_mesh(spine_idx)
 
     def compound_centered_spine_mesh_for_section(self, section_id):
         """Single spine mesh for a given section
@@ -246,8 +250,8 @@ class MorphologyWithSpines(Morphology):
         The points (i.e., vertices) of the mesh describing the shape of
         the neuron soma.
         """
-        with h5py.File(self._filepath, "r") as h5:
-            return h5[GRP_SOMA][GRP_MESHES][self.name][GRP_VERTICES][:].astype(float)
+        with h5py.File(self._filepath, "r") as h5_file:
+            return h5_file[GRP_SOMA][GRP_MESHES][self.name][GRP_VERTICES][:].astype(float)
 
     @property
     def soma_mesh_triangles(self):
@@ -256,14 +260,14 @@ class MorphologyWithSpines(Morphology):
         The triangles (i.e., faces) of the mesh describing the shape of
         the neuron soma.
         """
-        with h5py.File(self._filepath, "r") as h5:
-            return h5[GRP_SOMA][GRP_MESHES][self.name][GRP_TRIANGLES][:].astype(int)
+        with h5py.File(self._filepath, "r") as h5_file:
+            return h5_file[GRP_SOMA][GRP_MESHES][self.name][GRP_TRIANGLES][:].astype(int)
 
     @property
     def soma_mesh(self):
         """Returns the mesh (as a trimesh.Trimesh) of the neuron soma."""
-        tm = trimesh.Trimesh(vertices=self.soma_mesh_points, faces=self.soma_mesh_triangles)
-        return tm
+        soma_mesh = trimesh.Trimesh(vertices=self.soma_mesh_points, faces=self.soma_mesh_triangles)
+        return soma_mesh
 
 class Spines:
     """Represents the spines part and the meshes of the morphology with spines format."""
@@ -296,18 +300,18 @@ class Spines:
         (origin near its root, y-axis pointing towards its tip) to the
         global coordinate system of the neuron.
         """
-        rot = Rotation.from_quat(self.spine_table.loc[spine_loc, COL_ROTATION].to_numpy(dtype=float))
-        tf = self.spine_table.loc[spine_loc, COL_TRANSLATION].to_numpy(dtype=float)
-        return rot, tf
+        spine_rotation = Rotation.from_quat(self.spine_table.loc[spine_loc, COL_ROTATION].to_numpy(dtype=float))
+        spine_transformation = self.spine_table.loc[spine_loc, COL_TRANSLATION].to_numpy(dtype=float)
+        return spine_rotation, spine_transformation
 
-    def transform_for_spine(self, spine_loc, pts):
+    def transform_for_spine(self, spine_loc, spine_points):
         """Apply spine coordinate system transformations.
 
         Apply the transformation from the local spine coordinate system
         to the global neuron coordinate system to a set of points.
         """
-        rot, tf = self.spine_transformations(spine_loc)
-        return rot.apply(pts) + tf.reshape((1, -1))
+        spine_rotation, spine_transformation = self.spine_transformations(spine_loc)
+        return spine_rotation.apply(spine_points) + spine_transformation.reshape((1, -1))
 
     def _transform_spine_skeletons(self):
         """Apply transformations to spine skeletons.
@@ -318,14 +322,14 @@ class Spines:
 
         spines = self._centered_spine_skeletons.to_morphio().as_mutable()
         assert len(spines.root_sections) == self.spine_table.shape[0]
-        for i, root_spine in enumerate(spines.root_sections):
+        for spine_idx, root_spine in enumerate(spines.root_sections):
             lst_in = [root_spine]
             while len(lst_in) > 0:
                 lst_out = []
-                for sec in lst_in:
-                    pts = self.transform_for_spine(i, sec.points)
-                    sec.points = pts
-                    lst_out.extend(sec.children)
+                for section in lst_in:
+                    spine_points = self.transform_for_spine(spine_idx, section.points)
+                    section.points = spine_points
+                    lst_out.extend(section.children)
                 lst_in = lst_out
         return Morphology(spines.as_immutable(), name=f"{self.name}_spines")
 
@@ -347,15 +351,15 @@ class Spines:
         """
         _spine_mesh_grp = self.spine_table.loc[spine_loc, COL_SPINE_MESH]
         _spine_id = int(self.spine_table.loc[spine_loc, COL_SPINE_ID])
-        with h5py.File(self._filepath, "r") as h5:
-            grp = h5[GRP_SPINES][GRP_MESHES][_spine_mesh_grp]  # [_spine_id_grp]
-            fr_v = grp[GRP_OFFSETS][_spine_id, 0]
-            to_v = grp[GRP_OFFSETS][_spine_id + 1, 0]
-            pts = grp[GRP_VERTICES][fr_v:to_v].astype(float)
+        with h5py.File(self._filepath, "r") as h5_file:
+            group = h5_file[GRP_SPINES][GRP_MESHES][_spine_mesh_grp]  # [_spine_id_grp]
+            vertex_start = group[GRP_OFFSETS][_spine_id, 0]
+            vertex_end = group[GRP_OFFSETS][_spine_id + 1, 0]
+            spine_points = group[GRP_VERTICES][vertex_start:vertex_end].astype(float)
 
         if not transform:
-            return pts
-        return self.transform_for_spine(spine_loc, pts)
+            return spine_points
+        return self.transform_for_spine(spine_loc, spine_points)
 
     def spine_mesh_triangles(self, spine_loc):
         """Triangles of spine mesh.
@@ -365,11 +369,11 @@ class Spines:
         """
         _spine_mesh_grp = self.spine_table.loc[spine_loc, COL_SPINE_MESH]
         _spine_id = int(self.spine_table.loc[spine_loc, COL_SPINE_ID])
-        with h5py.File(self._filepath, "r") as h5:
-            grp = h5[GRP_SPINES][GRP_MESHES][_spine_mesh_grp]  # [_spine_id_grp]
-            fr_v = grp[GRP_OFFSETS][_spine_id, 1]
-            to_v = grp[GRP_OFFSETS][_spine_id + 1, 1]
-            triangles = grp[GRP_TRIANGLES][fr_v:to_v].astype(int)
+        with h5py.File(self._filepath, "r") as h5_file:
+            group = h5_file[GRP_SPINES][GRP_MESHES][_spine_mesh_grp]  # [_spine_id_grp]
+            vertex_start = group[GRP_OFFSETS][_spine_id, 1]
+            vertex_end = group[GRP_OFFSETS][_spine_id + 1, 1]
+            triangles = group[GRP_TRIANGLES][vertex_start:vertex_end].astype(int)
         return triangles
 
     def spine_mesh_points(self, spine_loc):
@@ -394,8 +398,11 @@ class Spines:
         Returns the mesh (as a trimesh.Trimesh) of an individual spine.
         In global neuron coordinates.
         """
-        tm = trimesh.Trimesh(vertices=self.spine_mesh_points(spine_loc), faces=self.spine_mesh_triangles(spine_loc))
-        return tm
+        spine_mesh = trimesh.Trimesh(
+            vertices=self.spine_mesh_points(spine_loc),
+            faces=self.spine_mesh_triangles(spine_loc)
+        )
+        return spine_mesh
 
     def centered_spine_mesh(self, spine_loc):
         """Spine mesh representation - local.
@@ -403,10 +410,11 @@ class Spines:
         Returns the mesh (as a trimesh.Trimesh) of an individual spine.
         In local spine coordinates.
         """
-        tm = trimesh.Trimesh(
-            vertices=self.centered_mesh_points(spine_loc), faces=self.spine_mesh_triangles(spine_loc)
+        spine_mesh = trimesh.Trimesh(
+            vertices=self.centered_mesh_points(spine_loc),
+            faces=self.spine_mesh_triangles(spine_loc)
         )
-        return tm
+        return spine_mesh
 
     def spine_indices_for_section(self, section_id):
         """Indices of spines on a given section.
@@ -430,8 +438,8 @@ class Spines:
         Iterator that lists the meshes of spines located on the specified
         section.
         """
-        for idx in self.spine_indices_for_section(section_id):
-            yield self.spine_mesh(idx)
+        for spine_idx in self.spine_indices_for_section(section_id):
+            yield self.spine_mesh(spine_idx)
 
     def compound_spine_mesh_for_section(self, section_id):
         """Single spine mesh for a given section
@@ -446,8 +454,8 @@ class Spines:
         Iterator that lists the meshes of spines located on the specified
         section. Meshes are transformed to be centered and upright.
         """
-        for idx in self.spine_indices_for_section(section_id):
-            yield self.centered_spine_mesh(idx)
+        for spine_idx in self.spine_indices_for_section(section_id):
+            yield self.centered_spine_mesh(spine_idx)
 
     def compound_centered_spine_mesh_for_section(self, section_id):
         """Single spine mesh for a given section
@@ -464,8 +472,8 @@ class Spines:
         The points (i.e., vertices) of the mesh describing the shape of
         the neuron soma.
         """
-        with h5py.File(self._filepath, "r") as h5:
-            return h5[GRP_SOMA][GRP_MESHES][self.name][GRP_VERTICES][:].astype(float)
+        with h5py.File(self._filepath, "r") as h5_file:
+            return h5_file[GRP_SOMA][GRP_MESHES][self.name][GRP_VERTICES][:].astype(float)
 
     @property
     def soma_mesh_triangles(self):
@@ -474,11 +482,11 @@ class Spines:
         The triangles (i.e., faces) of the mesh describing the shape of
         the neuron soma.
         """
-        with h5py.File(self._filepath, "r") as h5:
-            return h5[GRP_SOMA][GRP_MESHES][self.name][GRP_TRIANGLES][:].astype(int)
+        with h5py.File(self._filepath, "r") as h5_file:
+            return h5_file[GRP_SOMA][GRP_MESHES][self.name][GRP_TRIANGLES][:].astype(int)
 
     @property
     def soma_mesh(self):
         """Returns the mesh (as a trimesh.Trimesh) of the neuron soma."""
-        tm = trimesh.Trimesh(vertices=self.soma_mesh_points, faces=self.soma_mesh_triangles)
-        return tm
+        soma_mesh = trimesh.Trimesh(vertices=self.soma_mesh_points, faces=self.soma_mesh_triangles)
+        return soma_mesh
