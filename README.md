@@ -1,16 +1,16 @@
 # morph-spines
 
-Package to load morphologies with spines
+Package to load morphologies with spines.
 
 
 ## Installation
 
-Replace this text by proper installation instructions.
+The package can be installed through `pip`.
 
 
 ## Examples
 
-Provide here some examples on how this software can be used.
+See `examples` folder for usage examples.
 
 
 Copyright (c) 2025 Open Brain Institute
