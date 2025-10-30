@@ -5,7 +5,7 @@ import morphio
 from neurom.core.morphology import Morphology
 from neurom.io.utils import load_morphology as neurom_load_morphology
 
-from .morphology_with_spines import (
+from morph_spines.core.morphology_with_spines import (
     GRP_EDGES,
     GRP_MORPH,
     GRP_SPINES,
