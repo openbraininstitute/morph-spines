@@ -7,7 +7,11 @@ name = "morph_spines"
 dependencies = [
     'h5py>=3.10.0',
     'trimesh>=4.0.0',
-    'neurom>=4.0.4'
+    'neurom>=4.0.4',
+    'numpy',
+    'scipy',
+    'pandas',
+    'morphio'
 ]
 authors = [
     {name = "Judit Planas", email = "judit.planas@openbraininstitute.org"}
