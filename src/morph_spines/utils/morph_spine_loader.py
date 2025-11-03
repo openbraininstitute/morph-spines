@@ -19,6 +19,7 @@ def load_morphology_with_spines(
     Returns the representation of a spiny morphology of this package.
     """
     morphology = load_morphology(morphology_filepath, morphology_name, process_subtrees)
+    morphology_name = morphology.name
     soma = Soma(morphology_filepath, morphology_name)
     spines = load_spines(morphology_filepath, morphology_name, spines_are_centered)
     return MorphologyWithSpines(morphology, soma, spines)
@@ -50,12 +51,6 @@ def load_spines(filepath, name=None, spines_are_centered=True):
     """
     with h5py.File(filepath, "r") as h5:
         lst_morph_names = list(h5[GRP_EDGES].keys())
-        if len(lst_morph_names) == 0:
-            raise ValueError("The file is not a valid morphology-with-spines file")
-        if name is None:
-            if len(lst_morph_names) > 1:
-                raise ValueError("Multiple morphology names found in the file: must specify a morphology name")
-            name = lst_morph_names[0]
         if name not in lst_morph_names:
             raise ValueError(f"Morphology {name} not found in file!")
 

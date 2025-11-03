@@ -208,29 +208,3 @@ class Spines:
         Meshes are transformed to be centered and upright.
         """
         return trimesh.util.concatenate(self.centered_spine_meshes_for_section(section_id))
-
-    @property
-    def soma_mesh_points(self):
-        """Points of the soma mesh.
-
-        The points (i.e., vertices) of the mesh describing the shape of
-        the neuron soma.
-        """
-        with h5py.File(self._filepath, "r") as h5_file:
-            return h5_file[GRP_SOMA][GRP_MESHES][self.name][GRP_VERTICES][:].astype(float)
-
-    @property
-    def soma_mesh_triangles(self):
-        """Triangles of the soma mesh.
-
-        The triangles (i.e., faces) of the mesh describing the shape of
-        the neuron soma.
-        """
-        with h5py.File(self._filepath, "r") as h5_file:
-            return h5_file[GRP_SOMA][GRP_MESHES][self.name][GRP_TRIANGLES][:].astype(int)
-
-    @property
-    def soma_mesh(self):
-        """Returns the mesh (as a trimesh.Trimesh) of the neuron soma."""
-        soma_mesh = trimesh.Trimesh(vertices=self.soma_mesh_points, faces=self.soma_mesh_triangles)
-        return soma_mesh
