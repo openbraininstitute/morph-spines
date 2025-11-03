@@ -33,26 +33,27 @@ def load_morphology_with_spines(
     Loads a neuron morphology with spines from a hdf5 archive.
     Returns the representation of a spiny morphology of this package.
     """
-    morphology_name = _resolve_morphology_name(morphology_filepath, morphology_name)
     morphology = load_morphology(morphology_filepath, morphology_name, process_subtrees)
     soma = Soma(morphology_filepath, morphology_name)
     spines = load_spines(morphology_filepath, morphology_name, spines_are_centered)
     return MorphologyWithSpines(morphology, soma, spines)
 
-def load_morphology(filepath, name, process_subtrees=False):
+def load_morphology(filepath, name=None, process_subtrees=False):
     """Load a neuron morphology from a neuron morphology with spines representation.
     Loads the basic neuron morphology without its spine representation.
     Returns the representation of the neuron morphology.
     """
+    name = _resolve_morphology_name(filepath, name)
     coll = morphio.Collection(filepath)
     morphology = coll.load(f"{GRP_MORPH}/{name}")
     return Morphology(morphology, name, process_subtrees=process_subtrees)
 
-def load_spines(filepath, name, spines_are_centered=True):
+def load_spines(filepath, name=None, spines_are_centered=True):
     """Load the spines from a neuron morphology with spines representation.
     Loads the spines of a 'neuron morphology with spines' from a hdf5 archive.
     Returns the representation of the spines.
     """
+    name = _resolve_morphology_name(filepath, name)
     spine_table = pandas.read_hdf(filepath, key=f"{GRP_EDGES}/{name}")
     coll = morphio.Collection(filepath)
     centered_spine_skeletons = neurom_load_morphology(
@@ -64,4 +65,14 @@ def load_spines(filepath, name, spines_are_centered=True):
         spine_table,
         centered_spine_skeletons,
         spines_are_centered=spines_are_centered,
+    )
+
+def load_soma(filepath, name=None):
+    """
+    Load the soma mesh from a neuron morphology with spines representation.
+    """
+    name = _resolve_morphology_name(filepath, name=None)
+    return Soma(
+        filepath,
+        name
     )
