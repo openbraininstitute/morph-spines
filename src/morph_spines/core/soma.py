@@ -45,3 +45,7 @@ class Soma:
         """Returns the mesh (as a trimesh.Trimesh) of the neuron soma."""
         soma_mesh = trimesh.Trimesh(vertices=self.soma_mesh_points, faces=self.soma_mesh_triangles)
         return soma_mesh
+    
+    @property
+    def center(self):
+        return self.soma_mesh_points.mean(axis=0)
