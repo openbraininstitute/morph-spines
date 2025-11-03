@@ -11,7 +11,7 @@ from morph_spines.core.h5_schema import *
 
 class Soma:
     """Represents the soma part and its mesh of the morphology with spines format."""
-    def __init__(self, morphology_name, meshes_filepath):
+    def __init__(self, meshes_filepath, morphology_name):
         """Default constructor.
 
         morph_spines.morph_spine_loader.load_spines() intended for users.
