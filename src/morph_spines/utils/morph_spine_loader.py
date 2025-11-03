@@ -60,8 +60,8 @@ def load_spines(filepath, name=None, spines_are_centered=True):
         coll.load(f"{GRP_SPINES}/{GRP_SKELETONS}/{name}")
     )
     return Spines(
-        name,
         filepath,
+        name,
         spine_table,
         centered_spine_skeletons,
         spines_are_centered=spines_are_centered,

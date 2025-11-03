@@ -15,14 +15,14 @@ from morph_spines.core.h5_schema import *
 
 class Spines:
     """Represents the spines part and the meshes of the morphology with spines format."""
-    def __init__(self, morphology_name, meshes_filepath, spine_table, centered_spine_skeletons,
+    def __init__(self, meshes_filepath, morphology_name, spine_table, centered_spine_skeletons,
                  spines_are_centered=True, ):
         """Default constructor.
 
         morph_spines.morph_spine_loader.load_spines() intended for users.
         """
-        self.name = morphology_name
         self._filepath = meshes_filepath
+        self.name = morphology_name
         self.spine_table = spine_table
         self._centered_spine_skeletons = centered_spine_skeletons
         self._spines_are_centered = spines_are_centered
