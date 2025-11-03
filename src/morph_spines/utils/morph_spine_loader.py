@@ -34,7 +34,7 @@ def load_morphology_with_spines(
     Returns the representation of a spiny morphology of this package.
     """
     morphology = load_morphology(morphology_filepath, morphology_name, process_subtrees)
-    soma = Soma(morphology_filepath, morphology_name)
+    soma = load_soma(morphology_filepath, morphology_name)
     spines = load_spines(morphology_filepath, morphology_name, spines_are_centered)
     return MorphologyWithSpines(morphology, soma, spines)
 
@@ -71,7 +71,7 @@ def load_soma(filepath, name=None):
     """
     Load the soma mesh from a neuron morphology with spines representation.
     """
-    name = _resolve_morphology_name(filepath, name=None)
+    name = _resolve_morphology_name(filepath, name)
     return Soma(
         filepath,
         name
