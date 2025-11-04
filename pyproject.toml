@@ -12,7 +12,9 @@ dependencies = [
     'scipy',
     'pandas',
     'tables',
-    'morphio'
+    'morphio',
+    'pytest',
+    'pytest-cov'
 ]
 authors = [
     {name = "Judit Planas", email = "judit.planas@openbraininstitute.org"}
