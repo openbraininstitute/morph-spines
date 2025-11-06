@@ -1,6 +1,6 @@
 """Represents the spines of a neron morphology with spines.
 
-Provides utility and data acces to a representation of a
+Provides utility and data access to a representation of a
 neuron morphology with individual spines.
 """
 
