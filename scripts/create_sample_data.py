@@ -2,6 +2,7 @@
 
 import h5py
 import numpy as np
+import pandas as pd
 from pathlib import Path
 
 
@@ -11,19 +12,51 @@ output_dir = Path(f"{Path(__file__).parent.parent}/tests/data")
 output_dir.mkdir(exist_ok=True)
 output_file = Path(f"{output_dir}/{morphology_filename}")
 
-with h5py.File(output_file, "w") as h5_file:
-    # Group /edges
-    edges_grp = h5_file.create_group("edges")
-    edges_id = edges_grp.create_group(morphology_name)
-    edges_id.create_dataset("axis0", data=np.arange(3))
-    edges_id.create_dataset("axis1", data=np.arange(3))
-    edges_id.create_dataset("block0_items", data=np.arange(2))
-    edges_id.create_dataset("block0_values", data=np.random.random((3, 2)))
-    edges_id.create_dataset("block1_items", data=np.arange(2))
-    edges_id.create_dataset("block1_values", data=np.random.random((3, 2)))
-    edges_id.create_dataset("block2_items", data=np.array(2))
-    edges_id.create_dataset("block2_values", data=np.random.random((2, 2)))
+# Group /edges
+#edges_grp = h5_file.create_group("edges")
+#edges_id = edges_grp.create_group(morphology_name)
 
+# Pandas dataframe columns (axis0)
+columns = ['afferent_surface_x', 'afferent_surface_y', 'afferent_surface_z',
+           'afferent_center_x', 'afferent_center_y', 'afferent_center_z',
+           'spine_id', 'spine_morphology', 'spine_length',
+           'spine_orientation_vector_x', 'spine_orientation_vector_y',
+           'spine_orientation_vector_z', 'spine_rotation_x', 'spine_rotation_y',
+           'spine_rotation_z', 'spine_rotation_w', 'afferent_section_id',
+           'afferent_segment_id', 'afferent_segment_offset',
+           'afferent_section_pos']
+
+# Number of spines (axis1)
+num_spines = 2
+
+df = pd.DataFrame({
+    'afferent_surface_x':           np.random.random(num_spines),
+    'afferent_surface_y':           np.random.random(num_spines),
+    'afferent_surface_z':           np.random.random(num_spines),
+    'afferent_center_x':            np.random.random(num_spines),
+    'afferent_center_y':            np.random.random(num_spines),
+    'afferent_center_z':            np.random.random(num_spines),
+    'spine_id':                     np.array(range(num_spines)),
+    'spine_morphology':             [morphology_name] * num_spines,
+    'spine_length':                 np.random.random(num_spines),
+    'spine_orientation_vector_x':   np.random.random(num_spines),
+    'spine_orientation_vector_y':   np.random.random(num_spines),
+    'spine_orientation_vector_z':   np.random.random(num_spines),
+    'spine_rotation_x':             np.random.random(num_spines),
+    'spine_rotation_y':             np.random.random(num_spines),
+    'spine_rotation_z':             np.random.random(num_spines),
+    'spine_rotation_w':             np.random.random(num_spines),
+    'afferent_section_id':          np.random.random(num_spines),
+    'afferent_segment_id':          np.random.random(num_spines),
+    'afferent_segment_offset':      np.random.random(num_spines),
+    'afferent_section_pos':         np.random.random(num_spines)
+})
+
+key = str(f"/edges/{morphology_name}")
+
+df.to_hdf(output_file, key=key, mode="w")
+
+with h5py.File(output_file, "a") as h5_file:
     # Group /morphology
     morph_grp = h5_file.create_group("morphology")
     morph_id = morph_grp.create_group(morphology_name)
@@ -32,10 +65,10 @@ with h5py.File(output_file, "w") as h5_file:
         [0, 0, 0, 1],
         [1, 1, 1, 1],
         [2, 2, 2, 4],
-        [3, 3, 3, 4],
-        [3, 3, 3, 4],
-        [4, 4, 4, 4],
-        [3, 3, 3, 5],
+        [3, 2, 3, 4],
+        [3, 2, 3, 4],
+        [4, 3, 3, 4],
+        [3, 2, 3, 5],
         [5, 5, 5, 5]
     ], dtype=np.float32)
 
@@ -61,14 +94,44 @@ with h5py.File(output_file, "w") as h5_file:
     # Group /spines/meshes
     spines_meshes = spines_grp.create_group("meshes")
     spines_id = spines_meshes.create_group(morphology_name)
-    spines_id.create_dataset("offsets", data=np.random.randint(0, 100, (2, 2)))
-    spines_id.create_dataset("triangles", data=np.random.randint(0, 100, (2, 3)))
-    spines_id.create_dataset("vertices", data=np.random.random((2, 3)))
+
+    offsets = np.array([
+        [0, 0], [5, 6], [9, 10]     # [vertices_offset, triangles_offset]
+    ])
+    triangles = np.array([
+        #[0, 1, 2], [0, 2, 3], [0, 3, 4], [0, 4, 1], [1, 3, 2], [1, 4, 3], # square-based pyramid shaped spine, center at (0, 0, 0)
+        #[0, 2, 1], [0, 3, 2], [0, 1, 3], [1, 2, 3]                        # triangle-based pyramid shaped spine, center at (0, 0, 0)
+        [0, 2, 1], [0, 3, 2], [0, 4, 3], [0, 1, 4], [1, 2, 3], [1, 3, 4],  # square-based pyramid shaped spine, apex at (2, 2, 2)
+        [0, 1, 2], [0, 2, 3], [0, 3, 1], [1, 3, 2]                         # triangle-based pyramid shaped spine, apex at (5, 5, 5)
+    ])
+    vertices = np.array([
+        #[0, 0, 2], [1, 0, 0], [0, 1, 0], [-1, 0, 0], [0, -1, 0], # square-based pyramid shaped spine, center at (0, 0, 0)
+        #[0, 0, 4], [0, 2, 0], [2, -2, 0], [-2, -2, 0]            # triangle-based pyramid shaped spine, center at (0, 0, 0)
+        [2, 2, 2], [3, 2, 4], [2, 3, 4], [1, 2, 4], [2, 1, 4],    # square-based pyramid shaped spine, apex at (2, 2, 2)
+        [5, 5, 5], [5, 7, 9], [7, 3, 9], [3, 3, 9]                # triangle-based pyramid shaped spine, apex at (5, 5, 5)
+    ])
+
+    spines_id.create_dataset("offsets", data=offsets)
+    spines_id.create_dataset("triangles", data=triangles)
+    spines_id.create_dataset("vertices", data=vertices)
 
     # Group /spines/skeletons
     spines_skel = spines_grp.create_group("skeletons")
     spines_skel_id = spines_skel.create_group(morphology_name)
-    spines_skel_id.create_dataset("points", data=np.random.random((3, 4)))
-    spines_skel_id.create_dataset("structure", data=np.random.randint(0, 10, (2, 3)))
+
+    points = np.array([
+        [2, 2, 2, 0.1], # spine 0 start (x, y, z, d)
+        [2, 2, 4, 2.0], # spine 0 end (x, y, z, d)
+        [5, 5, 5, 0.1], # spine 1 start (x, y, z, d)
+        [5, 5, 9, 2.0]  # spine 1 end (x, y, z, d)
+    ])
+
+    structure = np.array([
+        [2, 2, -1],
+        [5, 2, -1]
+    ])
+
+    spines_skel_id.create_dataset("points", data=points)
+    spines_skel_id.create_dataset("structure", data=structure)
 
 print(f"{output_file} successfully created.")
