@@ -39,6 +39,18 @@ def spines():
 def test_spine_count(spines):
     assert spines.spine_count == 2
 
+def test_spine_transformations(spines):
+    expected_transformations = (
+        np.array([
+            [0.44180798, -0.58406595, 0.68093515],
+            [0.64080507, 0.73666259, 0.21609509],
+            [-0.62783323, 0.34087416, 0.69973583]
+        ]),
+        np.array([0.926668, 0.0630049, 0.957736]))
+    transformations = spines.spine_transformations(0)
+    assert np.allclose(transformations[0].as_matrix(), expected_transformations[0], rtol=1e-6, atol=1e-8)
+    assert np.allclose(transformations[1], expected_transformations[1], rtol=1e-6, atol=1e-8)
+
 #def test_spine_skeletons(spines):
 #    spine_skeletons = spines.spine_skeletons
 #    assert len(spine_skeletons) == 2
@@ -52,6 +64,14 @@ def test_spine_mesh_triangles(spines):
     expected_triangles = np.array([[0, 2, 1], [0, 3, 2], [0, 4, 3], [0, 1, 4], [1, 2, 3], [1, 3, 4]])
     triangles = spines.spine_mesh_triangles(spine_loc=0)
     assert_array_equal(triangles, expected_triangles)
+
+def test_spine_mesh(spines):
+    mesh = spines.spine_mesh(0)
+    assert isinstance(mesh, trimesh.Trimesh)
+
+def test_centered_spine_mesh(spines):
+    mesh = spines.centered_spine_mesh(0)
+    assert isinstance(mesh, trimesh.Trimesh)
 
 #def test_spine_indices_for_section(spines):
 #    spines.spine_indices_for_section(0)
