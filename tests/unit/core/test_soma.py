@@ -26,9 +26,9 @@ def soma():
 def test_soma_name(soma):
     assert soma.name == MORPH_WITH_SPINES_ID
 
-#def test_soma_center(soma):
-#    expected_center = np.array([0., 0., 0.])
-#    assert_array_equal(soma.center, expected_center)
+def test_soma_center(soma):
+    expected_center = np.array([0., 0., 0.])
+    assert_array_equal(soma.center, expected_center)
 
 def test_soma_mesh(soma):
     assert_array_equal(soma.soma_mesh.vertices, EXPECTED_SOMA_VERTICES)
