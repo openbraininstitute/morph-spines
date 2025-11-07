@@ -1,4 +1,4 @@
-# Read a morphology with spines file and reduce the soma mesh down to 10% of the original size
+"""Read a morphology with spines file and reduce the soma mesh down to 10% of the original size"""
 
 import h5py
 import numpy as np

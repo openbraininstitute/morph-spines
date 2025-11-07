@@ -1,6 +1,6 @@
 """Represents the spines of a neron morphology with spines.
 
-Provides utility and data acces to a representation of a
+Provides utility and data access to a representation of a
 neuron morphology with individual spines.
 """
 
@@ -16,7 +16,7 @@ from morph_spines.core.h5_schema import *
 class Spines:
     """Represents the spines part and the meshes of the morphology with spines format."""
     def __init__(self, meshes_filepath, morphology_name, spine_table, centered_spine_skeletons,
-                 spines_are_centered=True, ):
+                 spines_are_centered=True):
         """Default constructor.
 
         morph_spines.morph_spine_loader.load_spines() intended for users.

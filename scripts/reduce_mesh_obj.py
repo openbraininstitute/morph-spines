@@ -1,4 +1,4 @@
-# Given an .obj mesh file, reduce the given mesh down to 10% of the original size
+"""Given an .obj mesh file, reduce the given mesh down to 10% of the original size"""
 
 import open3d as o3d
 from pathlib import Path
