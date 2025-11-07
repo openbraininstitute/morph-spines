@@ -1,9 +1,10 @@
-"""Read a morphology with spines file and reduce the soma mesh down to 10% of the original size"""
+"""Read a morphology with spines file and reduce the soma mesh down to 10% of the original size."""
+
+from pathlib import Path
 
 import h5py
 import numpy as np
 import open3d as o3d
-from pathlib import Path
 
 input_file = Path("./data/morphology_with_spines/morphology_with_spines.obj")
 output_dir = Path(f"{input_file.parent}/output")
@@ -18,7 +19,7 @@ morph_ids = {"864691134884740346"}
 
 # Read original file and write to new output file, simplifying only target meshes
 with h5py.File(input_file, "r") as f_in, h5py.File(output_file, "w") as f_out:
-    for name, item in f_in.items():
+    for name, _item in f_in.items():
         if name != "soma":
             # Copy other top-level groups/datasets
             f_in.copy(name, f_out)
@@ -27,7 +28,7 @@ with h5py.File(input_file, "r") as f_in, h5py.File(output_file, "w") as f_out:
             soma_out = f_out.create_group("soma")
 
             # Copy all subgroups except meshes
-            for sub_name, sub_item in soma_in.items():
+            for sub_name, _sub_item in soma_in.items():
                 if sub_name != "meshes":
                     soma_in.copy(sub_name, soma_out)
 

@@ -1,16 +1,18 @@
 """Represents a neron morphology with spines.
 
-Provides utility and data acces to a representation of a
+Provides utility and data access to a representation of a
 neuron morphology with individual spines.
 """
 
 import h5py
 import trimesh
 
-from morph_spines.core.h5_schema import *
+from morph_spines.core.h5_schema import GRP_MESHES, GRP_SOMA, GRP_TRIANGLES, GRP_VERTICES
+
 
 class Soma:
     """Represents the soma part and its mesh of the morphology with spines format."""
+
     def __init__(self, meshes_filepath, morphology_name):
         """Default constructor.
 
@@ -18,7 +20,6 @@ class Soma:
         """
         self.name = morphology_name
         self._filepath = meshes_filepath
-
 
     @property
     def soma_mesh_points(self):
@@ -45,7 +46,8 @@ class Soma:
         """Returns the mesh (as a trimesh.Trimesh) of the neuron soma."""
         soma_mesh = trimesh.Trimesh(vertices=self.soma_mesh_points, faces=self.soma_mesh_triangles)
         return soma_mesh
-    
+
     @property
     def center(self):
+        """Returns the center of the soma mesh."""
         return self.soma_mesh_points.mean(axis=0)

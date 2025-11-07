@@ -1,7 +1,8 @@
-"""Given an .obj mesh file, reduce the given mesh down to 10% of the original size"""
+"""Given an .obj mesh file, reduce the given mesh down to 10% of the original size."""
+
+from pathlib import Path
 
 import open3d as o3d
-from pathlib import Path
 
 input_file = Path("./data/morphology_meshes/morphology_mesh.obj")
 output_dir = Path(f"{input_file.parent}/output")
@@ -35,5 +36,4 @@ o3d.io.write_triangle_mesh(output_file, simplified)
 print(f"Simplified mesh saved to {output_file}")
 
 # If in an ipython notebook, show the mesh
-#simplified.show()
-
+# simplified.show()

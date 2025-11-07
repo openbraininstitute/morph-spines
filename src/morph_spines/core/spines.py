@@ -6,17 +6,34 @@ neuron morphology with individual spines.
 
 import h5py
 import trimesh
+from neurom.core.morphology import Morphology
 from scipy.spatial.transform import Rotation
 
-from neurom.core.morphology import Morphology
-
-from morph_spines.core.h5_schema import *
+from morph_spines.core.h5_schema import (
+    COL_AFF_SEC,
+    COL_ROTATION,
+    COL_SPINE_ID,
+    COL_SPINE_MESH,
+    COL_TRANSLATION,
+    GRP_MESHES,
+    GRP_OFFSETS,
+    GRP_SPINES,
+    GRP_TRIANGLES,
+    GRP_VERTICES,
+)
 
 
 class Spines:
     """Represents the spines part and the meshes of the morphology with spines format."""
-    def __init__(self, meshes_filepath, morphology_name, spine_table, centered_spine_skeletons,
-                 spines_are_centered=True):
+
+    def __init__(
+        self,
+        meshes_filepath,
+        morphology_name,
+        spine_table,
+        centered_spine_skeletons,
+        spines_are_centered=True,
+    ):
         """Default constructor.
 
         morph_spines.morph_spine_loader.load_spines() intended for users.
@@ -44,8 +61,12 @@ class Spines:
         (origin near its root, y-axis pointing towards its tip) to the
         global coordinate system of the neuron.
         """
-        spine_rotation = Rotation.from_quat(self.spine_table.loc[spine_loc, COL_ROTATION].to_numpy(dtype=float))
-        spine_transformation = self.spine_table.loc[spine_loc, COL_TRANSLATION].to_numpy(dtype=float)
+        spine_rotation = Rotation.from_quat(
+            self.spine_table.loc[spine_loc, COL_ROTATION].to_numpy(dtype=float)
+        )
+        spine_transformation = self.spine_table.loc[spine_loc, COL_TRANSLATION].to_numpy(
+            dtype=float
+        )
         return spine_rotation, spine_transformation
 
     def transform_for_spine(self, spine_loc, spine_points):
@@ -63,9 +84,13 @@ class Spines:
         A helper that transforms all centered (in local coordinate system)
         spine skeletons of this class to the global neuron coordinate system.
         """
-
         spines = self._centered_spine_skeletons.to_morphio().as_mutable()
-        assert len(spines.root_sections) == self.spine_table.shape[0]
+        if len(spines.root_sections) != self.spine_table.shape[0]:
+            raise ValueError(
+                f"Number of root sections ({len(spines.root_sections)}) "
+                f"does not match spine table rows ({self.spine_table.shape[0]})."
+            )
+
         for spine_idx, root_spine in enumerate(spines.root_sections):
             lst_in = [root_spine]
             while len(lst_in) > 0:
@@ -143,8 +168,7 @@ class Spines:
         In global neuron coordinates.
         """
         spine_mesh = trimesh.Trimesh(
-            vertices=self.spine_mesh_points(spine_loc),
-            faces=self.spine_mesh_triangles(spine_loc)
+            vertices=self.spine_mesh_points(spine_loc), faces=self.spine_mesh_triangles(spine_loc)
         )
         return spine_mesh
 
@@ -156,7 +180,7 @@ class Spines:
         """
         spine_mesh = trimesh.Trimesh(
             vertices=self.centered_mesh_points(spine_loc),
-            faces=self.spine_mesh_triangles(spine_loc)
+            faces=self.spine_mesh_triangles(spine_loc),
         )
         return spine_mesh
 
@@ -177,7 +201,7 @@ class Spines:
         return self.spine_table.loc[self.spine_table[COL_AFF_SEC] == section_id]
 
     def spine_meshes_for_section(self, section_id):
-        """Spine meshes for a given section
+        """Spine meshes for a given section.
 
         Iterator that lists the meshes of spines located on the specified
         section.
@@ -186,14 +210,14 @@ class Spines:
             yield self.spine_mesh(spine_idx)
 
     def compound_spine_mesh_for_section(self, section_id):
-        """Single spine mesh for a given section
+        """Single spine mesh for a given section.
 
         A single compound mesh for all spines located on the section is returned.
         """
         return trimesh.util.concatenate(self.spine_meshes_for_section(section_id))
 
     def centered_spine_meshes_for_section(self, section_id):
-        """Centered spine meshes for a given section
+        """Centered spine meshes for a given section.
 
         Iterator that lists the meshes of spines located on the specified
         section. Meshes are transformed to be centered and upright.
@@ -202,7 +226,7 @@ class Spines:
             yield self.centered_spine_mesh(spine_idx)
 
     def compound_centered_spine_mesh_for_section(self, section_id):
-        """Single spine mesh for a given section
+        """Single spine mesh for a given section.
 
         A single compound mesh for all spines located on the section is returned.
         Meshes are transformed to be centered and upright.

@@ -1,6 +1,5 @@
 """Defines the schema used in the h5 file morphology-with-spines format."""
 
-
 # Names of groups in the morphology-w-spines hdf5 file
 # Root groups
 GRP_EDGES = "edges"
