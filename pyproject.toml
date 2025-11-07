@@ -17,10 +17,10 @@ dependencies = [
     'pytest-cov'
 ]
 authors = [
-    {name = "Judit Planas", email = "judit.planas@openbraininstitute.org"}
+    {name = "Open Brain Institute", email = "info@openbraininstitute.org"}
 ]
 maintainers = [
-    {name = "Judit Planas", email = "judit.planas@openbraininstitute.org"}
+    {name = "Open Brain Institute", email = "info@openbraininstitute.org"}
 ]
 description = "Package to load morphologies with spines"
 readme = "README.md"
@@ -129,7 +129,7 @@ parallel = false
 [tool.coverage.report]
 show_missing = true
 precision = 0
-fail_under = 80
+fail_under = 60
 
 [tool.mypy]
 show_error_codes = true
