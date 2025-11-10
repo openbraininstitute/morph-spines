@@ -4,7 +4,6 @@ Provides utility and data access to a representation of a
 neuron morphology with individual spines.
 """
 
-
 from collections.abc import Iterator
 
 import h5py
@@ -66,12 +65,10 @@ class Spines:
         (origin near its root, y-axis pointing towards its tip) to the
         global coordinate system of the neuron.
         """
-        spine_rotation = Rotation.from_quat(
-            self.spine_table.loc[[spine_loc], COL_ROTATION].to_numpy(dtype=float)
-        )
-        spine_transformation = self.spine_table.loc[[spine_loc], COL_TRANSLATION].to_numpy(
-            dtype=float
-        )
+        spine_row = self.spine_table.loc[spine_loc]
+        spine_rotation = Rotation.from_quat(spine_row[COL_ROTATION].to_numpy(dtype=float))
+        spine_transformation = spine_row[COL_TRANSLATION].to_numpy(dtype=float)
+
         return spine_rotation, spine_transformation
 
     def transform_for_spine(self, spine_loc: int, spine_points) -> NDArray:
@@ -123,8 +120,10 @@ class Spines:
         The points (i.e., vertices) of the meshes describing the shape of
         individual spines.
         """
-        _spine_mesh_grp = self.spine_table.loc[spine_loc, COL_SPINE_MESH]
-        _spine_id = int(self.spine_table.loc[[spine_loc], COL_SPINE_ID])
+        _spine_row = self.spine_table.loc[spine_loc]
+        _spine_mesh_grp = _spine_row[COL_SPINE_MESH]
+        _spine_id = int(_spine_row[COL_SPINE_ID])
+
         with h5py.File(self._filepath, "r") as h5_file:
             group = h5_file[GRP_SPINES][GRP_MESHES][_spine_mesh_grp]  # [_spine_id_grp]
             vertex_start = group[GRP_OFFSETS][_spine_id, 0]
@@ -141,8 +140,9 @@ class Spines:
         The triangles (i.e., faces) of the meshes describing the shape of
         individual spines.
         """
-        _spine_mesh_grp = self.spine_table.loc[spine_loc, COL_SPINE_MESH]
-        _spine_id = int(self.spine_table.loc[[spine_loc], COL_SPINE_ID])
+        _spine_row = self.spine_table.loc[spine_loc]
+        _spine_mesh_grp = _spine_row[COL_SPINE_MESH]
+        _spine_id = int(_spine_row[COL_SPINE_ID])
         with h5py.File(self._filepath, "r") as h5_file:
             group = h5_file[GRP_SPINES][GRP_MESHES][_spine_mesh_grp]  # [_spine_id_grp]
             vertex_start = group[GRP_OFFSETS][_spine_id, 1]

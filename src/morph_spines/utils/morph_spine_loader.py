@@ -4,7 +4,6 @@ Provides reader functions to load the representation of a neuron morphology
 with spines from an HDF5 file.
 """
 
-
 import h5py
 import morphio
 import pandas
@@ -17,7 +16,7 @@ from morph_spines.core.soma import Soma
 from morph_spines.core.spines import Spines
 
 
-def _resolve_morphology_name(morphology_filepath: str, morphology_name: str | None=None) -> str:
+def _resolve_morphology_name(morphology_filepath: str, morphology_name: str | None = None) -> str:
     with h5py.File(morphology_filepath, "r") as h5:
         lst_morph_names = list(h5[GRP_MORPH].keys())
         if len(lst_morph_names) == 0:
@@ -34,10 +33,10 @@ def _resolve_morphology_name(morphology_filepath: str, morphology_name: str | No
 
 
 def load_morphology_with_spines(
-        morphology_filepath: str,
-        morphology_name: str | None=None,
-        spines_are_centered: bool=True,
-        process_subtrees: bool=False
+    morphology_filepath: str,
+    morphology_name: str | None = None,
+    spines_are_centered: bool = True,
+    process_subtrees: bool = False,
 ) -> MorphologyWithSpines:
     """Load a neuron morphology with spines.
 
@@ -51,7 +50,7 @@ def load_morphology_with_spines(
 
 
 def load_morphology(
-        filepath: str, name: str | None=None, process_subtrees: bool=False
+    filepath: str, name: str | None = None, process_subtrees: bool = False
 ) -> Morphology:
     """Load a neuron morphology from a neuron morphology with spines representation.
 
@@ -64,7 +63,7 @@ def load_morphology(
     return Morphology(morphology, name, process_subtrees=process_subtrees)
 
 
-def load_spines(filepath: str, name: str | None=None, spines_are_centered: bool=True) -> Spines:
+def load_spines(filepath: str, name: str | None = None, spines_are_centered: bool = True) -> Spines:
     """Load the spines from a neuron morphology with spines representation.
 
     Loads the spines of a 'neuron morphology with spines' from a hdf5 archive.
@@ -89,7 +88,7 @@ def load_spines(filepath: str, name: str | None=None, spines_are_centered: bool=
     )
 
 
-def load_soma(filepath: str, name: str | None=None) -> Soma:
+def load_soma(filepath: str, name: str | None = None) -> Soma:
     """Load the soma mesh from a neuron morphology with spines representation."""
     name = _resolve_morphology_name(filepath, name)
     return Soma(filepath, name)
