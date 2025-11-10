@@ -71,7 +71,7 @@ class Spines:
 
         return spine_rotation, spine_transformation
 
-    def transform_for_spine(self, spine_loc: int, spine_points) -> NDArray:
+    def transform_for_spine(self, spine_loc: int, spine_points: NDArray) -> NDArray:
         """Apply spine coordinate system transformations.
 
         Apply the transformation from the local spine coordinate system
