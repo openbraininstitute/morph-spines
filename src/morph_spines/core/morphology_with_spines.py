@@ -16,7 +16,8 @@ from morph_spines.core.spines import Spines
 class MorphologyWithSpines:
     """Represents spiny neuron morphology.
 
-    A container data class to access the information contained in the MorphologyWithSpines format.
+    A container data class to access the information contained in the
+    MorphologyWithSpines format.
     """
 
     morphology: Morphology
