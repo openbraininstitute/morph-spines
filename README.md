@@ -12,5 +12,7 @@ The package can be installed through `pip`.
 
 See `examples` folder for usage examples.
 
+See `examples/data` for documentation on the file format.
+
 
 Copyright (c) 2025 Open Brain Institute
