@@ -8,6 +8,7 @@ some datasets are compressed, when indicated in their description.
 
 Each file can contain the information of one or multiple neurons, together with multiple spines.
 
+
 ## `/edges` group
 
 The `/edges` group contains one Pandas DataFrame for each neuron present in the file. Each
