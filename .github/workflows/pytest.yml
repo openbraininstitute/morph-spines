@@ -1,0 +1,29 @@
+# This workflow will run pytest when a PR is created
+
+name: pytest
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Install uv
+        run: pip install uv
+        
+      - name: Install dependencies
+        run: uv sync --all-extras --dev
+
+      - name: Run pytest
+        run: uv run pytest --maxfail=1 --disable-warnings
