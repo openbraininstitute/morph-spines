@@ -106,6 +106,7 @@ For example, for a neuron ID `"01234"`, the corresponding spine meshes will be s
 `/spines/meshes/01234`.
 
 The spine meshes are represented with three datasets: `/offsets`, `/triangles` and `/vertices`.
+These three datasets are the only ones stored compressed in the HDF5 file.
 
 The `/triangles` and `/vertices` datasets represent points and triangles in the 3D space in the
 same way as the `/soma/meshes` are described.
