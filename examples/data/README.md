@@ -88,6 +88,8 @@ For example, we can define a list of vertices in `[x, y, z]` coordinates as:
 Then, to form a triangle with these three vertices, the triangle list would be:
 `[[0, 1, 2]]`
 
+Note: the vertex order (winding) matters, as this will determine the front and the back face of the 
+triangle. To learn more, about this topic, see: https://learnopengl.com/Advanced-OpenGL/Face-culling
 
 
 ## `/spines` group
