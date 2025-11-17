@@ -25,27 +25,45 @@ The spines DataFrame contains information about the neuron spines. Each row repr
 spine and each column describes a property. Therefore, the number of rows of the DataFrame equals
 the number of spines belonging to the neuron.
 
-There are 20 columns, as follows:
-- `afferent_surface_x`: Spine's afferent surface, X dimension (type: float64)
-- `afferent_surface_y`: Spine's afferent surface, Y dimension (type: float64)
-- `afferent_surface_z`: Spine's afferent surface, Z dimension (type: float64)
-- `afferent_center_x`: Spine's afferent center, X dimension (type: float64)
-- `afferent_center_y`: Spine's afferent center, Y dimension (type: float64)
-- `afferent_center_z`: Spine's afferent center, Z dimension (type: float64)
-- `spine_id`: Spine ID, matches its row position in 0-based format (type: int64)
+There are 20 mandatory columns, as follows:
+
+- `afferent_surface_x`: Follows SONATA specification: spine's position on the surface of a
+  cylindrical cell segment, radially outward from the center position in the direction of the other
+  cell in micrometers, X dimension (type: float)
+- `afferent_surface_y`: Spine's afferent surface, Y dimension (type: float)
+- `afferent_surface_z`: Spine's afferent surface, Z dimension (type: float)
+- `afferent_center_x`: Follows SONATA specification: spine's position on the axis of the cell's
+  section/segment in micrometers, X dimension (type: float)
+- `afferent_center_y`: Spine's afferent center, Y dimension (type: float)
+- `afferent_center_z`: Spine's afferent center, Z dimension (type: float)
 - `spine_morphology`: Neuron ID which the spine belongs to (type: string)
-- `spine_length`: Length of the spine (type: float64)
-- `spine_orientation_vector_x`: Spine's orientation vector, X dimension (type: float64)
-- `spine_orientation_vector_y`: Spine's orientation vector, Y dimension (type: float64)
-- `spine_orientation_vector_z`: Spine's orientation vector, Z dimension (type: float64)
-- `spine_rotation_x`: Spine's rotation, X dimension (type: float64)
-- `spine_rotation_y`: Spine's rotation, Y dimension (type: float64)
-- `spine_rotation_z`: Spine's rotation, Z dimension (type: float64)
-- `spine_rotation_w`: Spine's rotation, W dimension (type: float64)
-- `afferent_section_id`: Spine's afferent section ID (type: int64)
-- `afferent_segment_id`: Spine's afferent segment ID (type: int64)
-- `afferent_segment_offset`: Spine's afferent segment offset (type: float64)
-- `afferent_section_pos`: Spine's afferent section position (type: float64)
+- `spine_length`: Length of the spine, from its root to its tip (type: float)
+- `spine_orientation_vector_x`: Spine's normalized orientation vector, pointing at spine's tip from
+  its root, X dimension (type: float)
+- `spine_orientation_vector_y`: Spine's normalized orientation vector, Y dimension (type: float)
+- `spine_orientation_vector_z`: Spine's normalized orientation vector, Z dimension (type: float)
+- `spine_rotation_x`: Spine's quaternion rotation, to be applied to get the true orientation of the
+  spine, X dimension (type: float)
+- `spine_rotation_y`: Spine's rotation, Y dimension (type: float)
+- `spine_rotation_z`: Spine's rotation, Z dimension (type: float)
+- `spine_rotation_w`: Spine's rotation, W dimension (type: float)
+- `afferent_section_id`: Follows SONATA specification: the specific section ID where a spine is
+  placed (type: uint)
+- `afferent_segment_id`: Follows SONATA specification: numerical index of the section of the cell
+  where the spine is placed (type: int)
+- `afferent_segment_offset`: Follows SONATA specification: spine's offset within the segment in
+  micrometers (type: float)
+- `afferent_section_pos`: Follows SONATA specification: spine's fractional position along the
+  length of the section, normalized to the range [0, 1], where 0 is the start and 1 is  the end of
+  the section (type: float)
+
+Additionally, we can have the following columns as optional:
+
+- `spine_id`: Spine ID, in certain cases, it matches its row position in 0-based format (type: int)
+- `spine_mesh`: offset to be applied within `/spines/meshes` to get to the first triangle of the
+  spine's mesh (type: uint)
+- `spine_volume`: Spine's head volume (type: float)
+- `spine_neck_diameter`: Spine's neck diameter (type: float)
 
 
 ## `/morphology` group
