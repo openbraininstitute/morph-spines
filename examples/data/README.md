@@ -106,6 +106,8 @@ For example, we can define a list of vertices in `[x, y, z]` coordinates as:
 Then, to form a triangle with these three vertices, the triangle list would be:
 `[[0, 1, 2]]`
 
+Note: the vertex order (winding) matters, as this will determine the front and the back face of the 
+triangle. To learn more, about this topic, see: https://learnopengl.com/Advanced-OpenGL/Face-culling
 
 
 ## `/spines` group
@@ -122,6 +124,7 @@ For example, for a neuron ID `"01234"`, the corresponding spine meshes will be s
 `/spines/meshes/01234`.
 
 The spine meshes are represented with three datasets: `/offsets`, `/triangles` and `/vertices`.
+These three datasets are the only ones stored compressed in the HDF5 file.
 
 The `/triangles` and `/vertices` datasets represent points and triangles in the 3D space in the
 same way as the `/soma/meshes` are described.
