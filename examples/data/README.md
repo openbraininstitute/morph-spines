@@ -59,7 +59,7 @@ There are 20 mandatory columns, as follows:
 
 Additionally, we can have the following columns as optional:
 
-- `spine_id`: Spine ID, in certain cases, it matches its row position in 0-based format (type: int)
+- `spine_id`: Spine ID, in 0-based format (type: uint)
 - `spine_mesh`: offset to be applied within `/spines/meshes` to get to the first triangle of the
   spine's mesh (type: uint)
 - `spine_volume`: Spine's head volume (type: float)
