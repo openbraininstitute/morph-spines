@@ -3,9 +3,10 @@
 This document describes the morphology with spines file format supported by this package.
 
 The file is in HDF5 format and the information is structured into different groups and datasets,
-described below.
+described below. In order to reduce the file size, some datasets are compressed, when indicated in
+their description.
 
-Each file can contain the information of one or multiple neurons.
+Each file can contain the information of one or multiple neurons, together with multiple spines.
 
 ## `/edges` group
 
@@ -36,7 +37,8 @@ There are 20 mandatory columns, as follows:
   section/segment in micrometers, X dimension (type: float)
 - `afferent_center_y`: Spine's afferent center, Y dimension (type: float)
 - `afferent_center_z`: Spine's afferent center, Z dimension (type: float)
-- `spine_morphology`: Neuron ID which the spine belongs to (type: string)
+- `spine_morphology`: Neuron ID which the spine belongs to. This field is used to index the spines
+  in the `/spines/meshes` and `/spines/skeletons` groups (type: string)
 - `spine_length`: Length of the spine, from its root to its tip (type: float)
 - `spine_orientation_vector_x`: Spine's normalized orientation vector, pointing at spine's tip from
   its root, X dimension (type: float)
@@ -61,8 +63,6 @@ Additionally, we can have the following columns as optional:
 
 - `spine_id`: Spine ID, in 0-based format, multiple rows can point at the same spine ID (type:
   uint)
-- `spine_mesh`: offset to be applied within `/spines/meshes` to get to the first triangle of the
-  spine's mesh (type: uint)
 - `spine_volume`: Spine's head volume (type: float)
 - `spine_neck_diameter`: Spine's neck diameter (type: float)
 
@@ -108,7 +108,8 @@ Then, to form a triangle with these three vertices, the triangle list would be:
 `[[0, 1, 2]]`
 
 Note: the vertex order (winding) matters, as this will determine the front and the back face of the 
-triangle. To learn more, about this topic, see: https://learnopengl.com/Advanced-OpenGL/Face-culling
+triangle, and therefore, its visibility. To learn more, about this topic, see:
+https://learnopengl.com/Advanced-OpenGL/Face-culling
 
 
 ## `/spines` group
@@ -117,12 +118,13 @@ The `/spines` group contains two subgroups called `/meshes` and `/skeletons`.
 
 ### `/spines/meshes` subgroup
 
-The `/spines/meshes` subgroup contains the mesh of each spine of each neuron present in the file. 
-There is a subgroup with the neuron ID for each neuron where all the spine meshes are grouped 
-together.
+The `/spines/meshes` subgroup contains the mesh of each spine present in the file. Spine meshes can
+be divided into subgroups. The most intuitive way to organize them is by the neuron ID where they
+belong to, although this is not a requirement. In any case, the `spine_morphology` entry in the
+`/edges` subgroup must match the subgroup where meshes are stored.
 
-For example, for a neuron ID `"01234"`, the corresponding spine meshes will be stored under
-`/spines/meshes/01234`.
+For example, if we split the spines by neuron ID, for a neuron ID `"01234"`, the corresponding 
+spine meshes will be stored under `/spines/meshes/01234`.
 
 The spine meshes are represented with three datasets: `/offsets`, `/triangles` and `/vertices`.
 These three datasets are the only ones stored compressed in the HDF5 file.
@@ -144,12 +146,14 @@ spine_triangles = neuron_triangles[neuron_offsets[IDS]:neuron_offsets[IDS+1]]
 
 ### `/spines/skeletons` subgroup
 
-The `/spines/skeletons` subgroup contains the skeleton structure of each spine of each neuron 
-present in the file. There is a subgroup with the neuron ID for each neuron where all the spine 
-skeleton structures are grouped together.
+The `/spines/skeletons` subgroup contains the skeleton structure of each spine present in the file.
+Similarly to the `/spines/meshes/...` subgroups, we can group spines by their neuron ID, or by
+another criteria. All the skeletons of the same subgroup are grouped together in a single
+structure. In any case, the `spine_morphology` entry in the `/edges` subgroup must match the 
+subgroup where skeletons are stored.
 
-For example, for a neuron ID `"01234"`, the corresponding spine skeletons will be stored under
-`/spines/skeletons/01234`.
+For example, if we split the spines by neuron ID, for a neuron ID `"01234"`, the corresponding
+spine skeletons will be stored under `/spines/skeletons/01234`.
 
 The format of the skeletons complies to the aforementioned H5 v1 morphology structure: 
 [H5 v1](https://morphology-documentation.readthedocs.io/en/latest/h5v1.html). However, only the 
