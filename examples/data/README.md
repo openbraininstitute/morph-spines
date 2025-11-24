@@ -3,8 +3,8 @@
 This document describes the morphology with spines file format supported by this package.
 
 The file is in HDF5 format and the information is structured into different groups and datasets,
-described below. In order to reduce the file size, some datasets are compressed, when indicated in
-their description.
+described below. Some of the datasets are optional, as indicated. In order to reduce the file size,
+some datasets are compressed, when indicated in their description.
 
 Each file can contain the information of one or multiple neurons, together with multiple spines.
 
@@ -66,6 +66,8 @@ Additionally, we can have the following columns as optional:
 - `spine_volume`: Spine's head volume (type: float)
 - `spine_neck_diameter`: Spine's neck diameter (type: float)
 
+The presence of this dataset is mandatory.
+
 
 ## `/morphology` group
 
@@ -79,6 +81,8 @@ The contents of each subgroup follow the morphology structure described in
 [H5 v1](https://morphology-documentation.readthedocs.io/en/latest/h5v1.html). However, only the 
 `/points` and `/structure` datasets are present. Following the example above, there would be two 
 datasets: `/morphology/01234/points` and `/morphology/01234/structure`.
+
+The presence of neuron morphology datasets (`/points` and `/structure`) is mandatory.
 
 
 ## `/soma` group
@@ -110,6 +114,8 @@ Then, to form a triangle with these three vertices, the triangle list would be:
 Note: the vertex order (winding) matters, as this will determine the front and the back face of the 
 triangle, and therefore, its visibility. To learn more, about this topic, see:
 https://learnopengl.com/Advanced-OpenGL/Face-culling
+
+The presence of soma mesh datasets (`/vertices` and `/triangles`) is optional.
 
 
 ## `/spines` group
@@ -144,6 +150,8 @@ spine_vertices = neuron_vertices[neuron_offsets[IDS]:neuron_offsets[IDS+1]]
 spine_triangles = neuron_triangles[neuron_offsets[IDS]:neuron_offsets[IDS+1]]
 ```
 
+The presence of spine meshes datasets (`vertices`, `/triangles` and `/offsets`) is optional.
+
 ### `/spines/skeletons` subgroup
 
 The `/spines/skeletons` subgroup contains the skeleton structure of each spine present in the file.
@@ -159,3 +167,5 @@ The format of the skeletons complies to the aforementioned H5 v1 morphology stru
 [H5 v1](https://morphology-documentation.readthedocs.io/en/latest/h5v1.html). However, only the 
 `/points` and `/structure` datasets are present. Following the example above, there would be two 
 datasets: `/spines/skeletons/01234/points` and `/spines/skeletons/01234/structure`.
+
+The presence of spine skeletons datasets (`/points` and `/structure`) is mandatory.
