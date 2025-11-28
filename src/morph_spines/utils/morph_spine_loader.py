@@ -6,7 +6,8 @@ with spines from an HDF5 file.
 
 import h5py
 import morphio
-import pandas
+import numpy as np
+import pandas as pd
 from neurom.core.morphology import Morphology
 from neurom.io.utils import load_morphology as neurom_load_morphology
 
@@ -63,6 +64,63 @@ def load_morphology(
     return Morphology(morphology, name, process_subtrees=process_subtrees)
 
 
+def _is_pandas_dataframe_group(filepath: str, name: str | None = None) -> bool:
+    """Check if an H5 group is a pandas dataframe."""
+    with h5py.File(filepath, "r") as h5:
+        df_group = h5[name]
+        if isinstance(df_group, h5py.Group):
+            if "pandas_type" in df_group.attrs:
+                return True
+    return False
+
+
+def _load_spine_table_from_array(filepath: str, name: str | None = None) -> pd.DataFrame:
+    """Load the spine table from an HDF5 compound type array as a pandas dataframe."""
+    with h5py.File(filepath, "r") as h5:
+        dset = h5[name]
+
+        # Must be a compound dataset
+        if not isinstance(dset.dtype, np.dtype) or dset.dtype.names is None:
+            raise TypeError(f"Dataset {name} is not a compound dataset")
+
+        data = dset[:]  # structured numpy array
+        columns = {}
+        for name in dset.dtype.names:
+            col = data[name]
+            # Handle variable-length UTF-8 strings (dtype = object)
+            if col.dtype.kind == "O":
+                col = col.astype(str)
+            # Handle fixed-length ASCII/UTF-8 strings (dtype = 'Sxx')
+            elif col.dtype.kind == "S":
+                col = col.astype(str)
+            # else: No conversion needed for numeric types
+
+            columns[name] = col
+
+        return pd.DataFrame(columns)
+
+
+def load_spine_table(filepath: str, name: str | None = None) -> pd.DataFrame:
+    """Load the spines table from a neuron morphology with spines representation.
+
+    Returns the spines table as a pandas DataFrame.
+    """
+    if _is_pandas_dataframe_group(filepath, name):
+        print(
+            "Warning: deprecated format: spine table stored as pandas DataFrame in HDF5 file.\n"
+            "Please, use the conversion script 'h5_dataframe_to_h5_struct_array.py' to update"
+            "the format."
+        )
+        spine_table = pd.read_hdf(filepath, key=name)
+    else:
+        spine_table = _load_spine_table_from_array(filepath, name)
+
+    if not isinstance(spine_table, pd.DataFrame):
+        raise TypeError(f"Error reading the spine table from {name}")
+
+    return spine_table
+
+
 def load_spines(filepath: str, name: str | None = None, spines_are_centered: bool = True) -> Spines:
     """Load the spines from a neuron morphology with spines representation.
 
@@ -70,10 +128,9 @@ def load_spines(filepath: str, name: str | None = None, spines_are_centered: boo
     Returns the representation of the spines.
     """
     name = _resolve_morphology_name(filepath, name)
-    spine_table = pandas.read_hdf(filepath, key=f"{GRP_EDGES}/{name}")
 
-    if not isinstance(spine_table, pandas.DataFrame):
-        raise TypeError(f"Expected DataFrame in HDF5 file, but got {type(spine_table).__name__}")
+    spine_table_path = f"{GRP_EDGES}/{name}"
+    spine_table = load_spine_table(filepath, spine_table_path)
 
     coll = morphio.Collection(filepath)
     centered_spine_skeletons = neurom_load_morphology(
