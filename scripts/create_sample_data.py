@@ -4,7 +4,6 @@ from pathlib import Path
 
 import h5py
 import numpy as np
-import pandas as pd
 
 morphology_filename = "morph_with_spines_schema.h5"
 morphology_name = "01234"
@@ -12,96 +11,105 @@ output_dir = Path(f"{Path(__file__).parent.parent}/tests/data")
 output_dir.mkdir(exist_ok=True)
 output_file = Path(f"{output_dir}/{morphology_filename}")
 
+random_spine_data = False
+
 # Group /edges
-# edges_grp = h5_file.create_group("edges")
-# edges_id = edges_grp.create_group(morphology_name)
+dtypes = np.dtype(
+    [
+        ("afferent_surface_x", np.float64),
+        ("afferent_surface_y", np.float64),
+        ("afferent_surface_z", np.float64),
+        ("afferent_center_x", np.float64),
+        ("afferent_center_y", np.float64),
+        ("afferent_center_z", np.float64),
+        ("spine_id", np.int64),
+        ("spine_morphology", "S16"),  # fixed-length string
+        ("spine_length", np.float64),
+        ("spine_orientation_vector_x", np.float64),
+        ("spine_orientation_vector_y", np.float64),
+        ("spine_orientation_vector_z", np.float64),
+        ("spine_rotation_x", np.float64),
+        ("spine_rotation_y", np.float64),
+        ("spine_rotation_z", np.float64),
+        ("spine_rotation_w", np.float64),
+        ("afferent_section_id", np.int64),
+        ("afferent_segment_id", np.int64),
+        ("afferent_segment_offset", np.float64),
+        ("afferent_section_pos", np.float64),
+    ]
+)
 
-# Pandas dataframe columns (axis0)
-columns = [
-    "afferent_surface_x",
-    "afferent_surface_y",
-    "afferent_surface_z",
-    "afferent_center_x",
-    "afferent_center_y",
-    "afferent_center_z",
-    "spine_id",
-    "spine_morphology",
-    "spine_length",
-    "spine_orientation_vector_x",
-    "spine_orientation_vector_y",
-    "spine_orientation_vector_z",
-    "spine_rotation_x",
-    "spine_rotation_y",
-    "spine_rotation_z",
-    "spine_rotation_w",
-    "afferent_section_id",
-    "afferent_segment_id",
-    "afferent_segment_offset",
-    "afferent_section_pos",
-]
-
-# Number of spines (axis1)
+# Number of spines
 num_spines = 2
 
-random_df_data = False
+# Create an empty structured array, to be filled with random or pre-defined data
+data = np.empty(num_spines, dtype=dtypes)
 
-if random_df_data:
-    df = pd.DataFrame(
-        {
-            "afferent_surface_x": np.random.random(num_spines),
-            "afferent_surface_y": np.random.random(num_spines),
-            "afferent_surface_z": np.random.random(num_spines),
-            "afferent_center_x": np.random.random(num_spines),
-            "afferent_center_y": np.random.random(num_spines),
-            "afferent_center_z": np.random.random(num_spines),
-            "spine_id": np.array(range(num_spines), dtype=np.int64),
-            "spine_morphology": [morphology_name] * num_spines,
-            "spine_length": np.random.random(num_spines),
-            "spine_orientation_vector_x": np.random.random(num_spines),
-            "spine_orientation_vector_y": np.random.random(num_spines),
-            "spine_orientation_vector_z": np.random.random(num_spines),
-            "spine_rotation_x": np.random.random(num_spines),
-            "spine_rotation_y": np.random.random(num_spines),
-            "spine_rotation_z": np.random.random(num_spines),
-            "spine_rotation_w": np.random.random(num_spines),
-            "afferent_section_id": np.random.randint(num_spines),
-            "afferent_segment_id": np.random.randint(num_spines),
-            "afferent_segment_offset": np.random.random(num_spines),
-            "afferent_section_pos": np.random.random(num_spines),
-        }
-    )
+# Fill the fields
+if random_spine_data:
+    data["afferent_surface_x"] = np.random.random(num_spines)
+    data["afferent_surface_y"] = np.random.random(num_spines)
+    data["afferent_surface_z"] = np.random.random(num_spines)
+
+    data["afferent_center_x"] = np.random.random(num_spines)
+    data["afferent_center_y"] = np.random.random(num_spines)
+    data["afferent_center_z"] = np.random.random(num_spines)
+
+    data["spine_id"] = np.array(range(num_spines), dtype=np.int64)
+    data["spine_morphology"] = [morphology_name] * num_spines
+    data["spine_length"] = np.random.random(num_spines)
+
+    data["spine_orientation_vector_x"] = np.random.random(num_spines)
+    data["spine_orientation_vector_y"] = np.random.random(num_spines)
+    data["spine_orientation_vector_z"] = np.random.random(num_spines)
+
+    data["spine_rotation_x"] = np.random.random(num_spines)
+    data["spine_rotation_y"] = np.random.random(num_spines)
+    data["spine_rotation_z"] = np.random.random(num_spines)
+    data["spine_rotation_w"] = np.random.random(num_spines)
+
+    data["afferent_section_id"] = np.random.randint(num_spines)
+    data["afferent_segment_id"] = np.random.randint(num_spines)
+    data["afferent_segment_offset"] = np.random.random(num_spines)
+    data["afferent_section_pos"] = np.random.random(num_spines)
+
 else:
-    spines = np.array(range(num_spines), dtype=np.int64) + 1
-    df = pd.DataFrame(
-        {
-            "afferent_surface_x": np.array([0.1 * i for i in spines], dtype=np.float64),
-            "afferent_surface_y": np.array([0.1 * i + i / 100 for i in spines], dtype=np.float64),
-            "afferent_surface_z": np.array([0.1 * i + i / 1000 for i in spines], dtype=np.float64),
-            "afferent_center_x": np.array([1.0 * i + i for i in spines], dtype=np.float64),
-            "afferent_center_y": np.array([1.0 * i + i * 10 for i in spines], dtype=np.float64),
-            "afferent_center_z": np.array([1.0 * i + i * 100 for i in spines], dtype=np.float64),
-            "spine_id": np.array(range(num_spines), dtype=np.int64),
-            "spine_morphology": [morphology_name] * num_spines,
-            "spine_length": np.array([i for i in spines], dtype=np.float64),
-            "spine_orientation_vector_x": np.array([0.1234 * i for i in spines], dtype=np.float64),
-            "spine_orientation_vector_y": np.array([0.2345 * i for i in spines], dtype=np.float64),
-            "spine_orientation_vector_z": np.array([0.3456 * i for i in spines], dtype=np.float64),
-            "spine_rotation_x": np.array([0.4567 * i for i in spines], dtype=np.float64),
-            "spine_rotation_y": np.array([0.5678 * i for i in spines], dtype=np.float64),
-            "spine_rotation_z": np.array([0.6789 * i for i in spines], dtype=np.float64),
-            "spine_rotation_w": np.array([0.7891 * i for i in spines], dtype=np.float64),
-            "afferent_section_id": np.array([10 + i for i in spines], dtype=np.int64),
-            "afferent_segment_id": np.array([100 + i for i in spines], dtype=np.int64),
-            "afferent_segment_offset": np.array([0.8901 * i for i in spines], dtype=np.float64),
-            "afferent_section_pos": np.array([0.9012 * i for i in spines], dtype=np.float64),
-        }
-    )
+    spines = np.arange(1, num_spines + 1, dtype=np.int64)
 
-key = str(f"/edges/{morphology_name}")
+    data["afferent_surface_x"] = np.array(0.1 * spines, dtype=np.float64)
+    data["afferent_surface_y"] = np.array(0.1 * spines + spines / 100, dtype=np.float64)
+    data["afferent_surface_z"] = np.array(0.1 * spines + spines / 1000, dtype=np.float64)
 
-df.to_hdf(output_file, key=key, mode="w")
+    data["afferent_center_x"] = np.array(1.0 * spines + spines, dtype=np.float64)
+    data["afferent_center_y"] = np.array(1.0 * spines + spines * 10, dtype=np.float64)
+    data["afferent_center_z"] = np.array(1.0 * spines + spines * 100, dtype=np.float64)
+
+    data["spine_id"] = np.arange(num_spines, dtype=np.int64)
+    # data["spine_morphology"] =
+    # np.array([morphology_name.encode("utf-8")] * num_spines, dtype="S32")
+    data["spine_morphology"] = np.array([morphology_name] * num_spines, dtype="S32")
+    data["spine_length"] = spines.astype(np.float64)
+
+    data["spine_orientation_vector_x"] = np.array(0.1234 * spines, dtype=np.float64)
+    data["spine_orientation_vector_y"] = np.array(0.2345 * spines, dtype=np.float64)
+    data["spine_orientation_vector_z"] = np.array(0.3456 * spines, dtype=np.float64)
+
+    data["spine_rotation_x"] = np.array(0.4567 * spines, dtype=np.float64)
+    data["spine_rotation_y"] = np.array(0.5678 * spines, dtype=np.float64)
+    data["spine_rotation_z"] = np.array(0.6789 * spines, dtype=np.float64)
+    data["spine_rotation_w"] = np.array(0.7891 * spines, dtype=np.float64)
+
+    data["afferent_section_id"] = np.array(10 + spines, dtype=np.int64)
+    data["afferent_segment_id"] = np.array(100 + spines, dtype=np.int64)
+    data["afferent_segment_offset"] = np.array(0.8901 * spines, dtype=np.float64)
+    data["afferent_section_pos"] = np.array(0.9012 * spines, dtype=np.float64)
 
 with h5py.File(output_file, "a") as h5_file:
+    # Group /edges
+    edges_grp = h5_file.create_group("edges")
+    spine_table_key = str(f"/edges/{morphology_name}")
+    edges_grp.create_dataset(spine_table_key, data=data)
+
     # Group /morphology
     morph_grp = h5_file.create_group("morphology")
     morph_id = morph_grp.create_group(morphology_name)
