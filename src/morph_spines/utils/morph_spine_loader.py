@@ -26,7 +26,8 @@ def _resolve_morphology_name(morphology_filepath: str, morphology_name: str | No
             if morphology_name is None:
                 if len(lst_morph_names) > 1:
                     raise ValueError(
-                        "Multiple morphology names found in the file: must specify a morphology name"
+                        "Multiple morphology names found in the file: must specify a morphology "
+                        "name"
                     )
                 morphology_name = lst_morph_names[0]
             if morphology_name not in lst_morph_names:
@@ -34,7 +35,6 @@ def _resolve_morphology_name(morphology_filepath: str, morphology_name: str | No
             return morphology_name
         else:
             raise ValueError("The file is not a valid morphology-with-spines file")
-
 
 
 def load_morphology_with_spines(
