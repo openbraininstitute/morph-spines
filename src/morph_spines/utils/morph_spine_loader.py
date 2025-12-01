@@ -19,18 +19,22 @@ from morph_spines.core.spines import Spines
 
 def _resolve_morphology_name(morphology_filepath: str, morphology_name: str | None = None) -> str:
     with h5py.File(morphology_filepath, "r") as h5:
-        lst_morph_names = list(h5[GRP_MORPH].keys())
-        if len(lst_morph_names) == 0:
+        if GRP_MORPH in list(h5.keys()):
+            lst_morph_names = list(h5[GRP_MORPH].keys())
+            if len(lst_morph_names) == 0:
+                raise ValueError("No morphology names were found in the file")
+            if morphology_name is None:
+                if len(lst_morph_names) > 1:
+                    raise ValueError(
+                        "Multiple morphology names found in the file: must specify a morphology name"
+                    )
+                morphology_name = lst_morph_names[0]
+            if morphology_name not in lst_morph_names:
+                raise ValueError(f"Morphology {morphology_name} not found in file")
+            return morphology_name
+        else:
             raise ValueError("The file is not a valid morphology-with-spines file")
-        if morphology_name is None:
-            if len(lst_morph_names) > 1:
-                raise ValueError(
-                    "Multiple morphology names found in the file: must specify a morphology name"
-                )
-            morphology_name = lst_morph_names[0]
-        if morphology_name not in lst_morph_names:
-            raise ValueError(f"Morphology {morphology_name} not found in file")
-    return morphology_name
+
 
 
 def load_morphology_with_spines(
@@ -108,7 +112,7 @@ def load_spine_table(filepath: str, name: str | None = None) -> pd.DataFrame:
     if _is_pandas_dataframe_group(filepath, name):
         print(
             "Warning: deprecated format: spine table stored as pandas DataFrame in HDF5 file.\n"
-            "Please, use the conversion script 'h5_dataframe_to_h5_struct_array.py' to update"
+            "Please, use the conversion script 'h5_dataframe_to_h5_struct_array.py' to update "
             "the format."
         )
         spine_table = pd.read_hdf(filepath, key=name)
