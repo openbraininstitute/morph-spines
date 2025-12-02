@@ -78,7 +78,7 @@ def _is_pandas_dataframe_group(filepath: str, name: str | None = None) -> bool:
     return False
 
 
-def _load_spine_table_from_array(filepath: str, name: str | None = None) -> pd.DataFrame:
+def _load_spine_table_from_array(filepath: str, name: str) -> pd.DataFrame:
     """Load the spine table from an HDF5 compound type array as a pandas dataframe."""
     with h5py.File(filepath, "r") as h5:
         dset = h5[name]
@@ -104,7 +104,7 @@ def _load_spine_table_from_array(filepath: str, name: str | None = None) -> pd.D
         return pd.DataFrame(columns)
 
 
-def load_spine_table(filepath: str, name: str | None = None) -> pd.DataFrame:
+def load_spine_table(filepath: str, name: str) -> pd.DataFrame:
     """Load the spines table from a neuron morphology with spines representation.
 
     Returns the spines table as a pandas DataFrame.
