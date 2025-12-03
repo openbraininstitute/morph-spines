@@ -68,14 +68,77 @@ def load_morphology(
     return Morphology(morphology, name, process_subtrees=process_subtrees)
 
 
-def _is_pandas_dataframe_group(filepath: str, name: str | None = None) -> bool:
+def _is_pandas_dataframe_group(filepath: str, name: str) -> bool:
     """Check if an H5 group is a pandas dataframe."""
     with h5py.File(filepath, "r") as h5:
+        if name not in h5:
+            raise TypeError(f"Could not find {name} inside the H5 file")
+
         df_group = h5[name]
         if isinstance(df_group, h5py.Group):
             if "pandas_type" in df_group.attrs:
                 return True
     return False
+
+
+def _is_datasets_group(filepath: str, name: str) -> bool:
+    """Check if an H5 group contains a set of datasets that form a table.
+
+    The following conditions must be met:
+    - 'name' must be a group inside the H5 file
+    - 'name' group must contain at least one dataset
+    - 'name' group cannot contain other groups
+    - All datasets within 'name' group must have the same size
+    """
+    with h5py.File(filepath, "r") as h5:
+        if name not in h5:
+            raise TypeError(f"Could not find {name} inside the H5 file")
+
+        df_group = h5[name]
+
+        # If 'name' is not a group, return false
+        if not isinstance(df_group, h5py.Group):
+            return False
+
+        # If group is empty, return false
+        if len(df_group.keys()) == 0:
+            return False
+
+        dsets_len = []
+        for _key, item in df_group.items():
+            if not isinstance(item, h5py.Dataset):
+                return False
+
+            try:
+                length = item.shape[0]
+            except Exception:
+                # Scalars or weird shapes cannot be table columns
+                return False
+
+            dsets_len.append(length)
+
+        # All dataset lengths must be the same
+        if len(set(dsets_len)) == 1:
+            return True
+
+    return False
+
+
+def _load_spine_table_from_datasets_group(filepath: str, name: str) -> pd.DataFrame:
+    """Load the spine table from a group of HDF5 datasets as a pandas dataframe.
+
+    Note: all datasets with object ('O') or fixed-string ('S') are converted into strings.
+    """
+    columns = dict()
+    with h5py.File(filepath, "r") as h5:
+        df_group = h5[name]
+        for key in df_group.keys():
+            col_data = df_group[key][:]
+            # Convert byte strings into Python strings
+            if col_data.dtype.kind == "S" or col_data.dtype.kind == "O":
+                col_data = col_data.astype(str)
+            columns[str(key)] = col_data
+    return pd.DataFrame(columns)
 
 
 def _load_spine_table_from_array(filepath: str, name: str) -> pd.DataFrame:
@@ -116,6 +179,10 @@ def load_spine_table(filepath: str, name: str) -> pd.DataFrame:
             "the format."
         )
         spine_table = pd.read_hdf(filepath, key=name)
+
+    elif _is_datasets_group(filepath, name):
+        spine_table = _load_spine_table_from_datasets_group(filepath, name)
+
     else:
         spine_table = _load_spine_table_from_array(filepath, name)
 
