@@ -89,6 +89,7 @@ def _is_datasets_group(filepath: str, name: str) -> bool:
     - 'name' group must contain at least one dataset
     - 'name' group cannot contain other groups
     - All datasets within 'name' group must have the same size
+    - All datasets within 'name' group cannot be multidimensional
     """
     with h5py.File(filepath, "r") as h5:
         if name not in h5:
@@ -109,11 +110,16 @@ def _is_datasets_group(filepath: str, name: str) -> bool:
             if not isinstance(item, h5py.Dataset):
                 return False
 
-            try:
-                length = item.shape[0]
-            except Exception:
-                # Scalars or weird shapes cannot be table columns
+            # If dataset is a multidimensional array, return False
+            if len(item.shape) > 1:
                 return False
+
+            if item.shape == ():
+                # Scalar datasets
+                length = 0
+            else:
+                # 1-dimensional arrays
+                length = item.shape[0]
 
             dsets_len.append(length)
 
@@ -133,7 +139,11 @@ def _load_spine_table_from_datasets_group(filepath: str, name: str) -> pd.DataFr
     with h5py.File(filepath, "r") as h5:
         df_group = h5[name]
         for key in df_group.keys():
-            col_data = df_group[key][:]
+            if df_group[key].shape == ():
+                # If it's a scalar type, create a 1-element array
+                col_data = np.array([df_group[key][()]])
+            else:
+                col_data = df_group[key][:]
             # Convert byte strings into Python strings
             if col_data.dtype.kind == "S" or col_data.dtype.kind == "O":
                 col_data = col_data.astype(str)
@@ -141,7 +151,29 @@ def _load_spine_table_from_datasets_group(filepath: str, name: str) -> pd.DataFr
     return pd.DataFrame(columns)
 
 
-def _load_spine_table_from_array(filepath: str, name: str) -> pd.DataFrame:
+def _is_compound_dataset(filepath: str, name: str) -> bool:
+    """Check if an H5 dataset contains a compound type array.
+
+    The following conditions must be met:
+    - 'name' must be a dataset inside the H5 file
+    - 'name' dataset must be a compound type array
+    - Supported types inside the dataset are: numerical values and both fixed-length and
+    variable-length strings
+    """
+    with h5py.File(filepath, "r") as h5:
+        if name not in h5:
+            raise TypeError(f"Could not find {name} inside the H5 file")
+
+        dset = h5[name]
+        if not isinstance(dset, h5py.Dataset):
+            return False
+        if not isinstance(dset.dtype, np.dtype) or dset.dtype.names is None:
+            return False
+
+        return True
+
+
+def _load_spine_table_from_compound_dataset(filepath: str, name: str) -> pd.DataFrame:
     """Load the spine table from an HDF5 compound type array as a pandas dataframe."""
     with h5py.File(filepath, "r") as h5:
         dset = h5[name]
@@ -154,14 +186,13 @@ def _load_spine_table_from_array(filepath: str, name: str) -> pd.DataFrame:
         columns = {}
         for name in dset.dtype.names:
             col = data[name]
-            # Handle variable-length UTF-8 strings (dtype = object)
             if col.dtype.kind == "O":
+                # Handle variable-length UTF-8 strings (dtype = object)
                 col = col.astype(str)
-            # Handle fixed-length ASCII/UTF-8 strings (dtype = 'Sxx')
             elif col.dtype.kind == "S":
+                # Handle fixed-length ASCII/UTF-8 strings (dtype = 'Sxx')
                 col = col.astype(str)
             # else: No conversion needed for numeric types
-
             columns[name] = col
 
         return pd.DataFrame(columns)
@@ -179,15 +210,16 @@ def load_spine_table(filepath: str, name: str) -> pd.DataFrame:
             "the format."
         )
         spine_table = pd.read_hdf(filepath, key=name)
+        spine_table = spine_table.to_frame() if isinstance(spine_table, pd.Series) else spine_table
 
     elif _is_datasets_group(filepath, name):
         spine_table = _load_spine_table_from_datasets_group(filepath, name)
 
-    else:
-        spine_table = _load_spine_table_from_array(filepath, name)
+    elif _is_compound_dataset(filepath, name):
+        spine_table = _load_spine_table_from_compound_dataset(filepath, name)
 
-    if not isinstance(spine_table, pd.DataFrame):
-        raise TypeError(f"Error reading the spine table from {name}")
+    else:
+        raise TypeError(f"Could not find a valid spine table in {name}")
 
     return spine_table
 
