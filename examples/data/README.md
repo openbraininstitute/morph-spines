@@ -11,19 +11,24 @@ Each file can contain the information of one or multiple neurons, together with 
 
 ## `/edges` group
 
-The `/edges` group contains one Pandas DataFrame for each neuron present in the file. Each
-DataFrame is represented by a dataset inside the neuron's ID subgroup, and it describes different
-properties related to the neuron's spines.
+The `/edges` group contains one spine table for each neuron present in the file. Each spine table
+is stored inside the neuron's ID subgroup, and it describes different properties related to the 
+neuron's spines.
 
 For example, for a neuron ID `"01234"`, the corresponding DataFrame will be stored under
 `/edges/01234`.
 
-The DataFrame can be read and written through Panda's `pandas.DataFrame.read_hdf()` and 
-`pandas.DataFrame.to_hdf()` respectively.
+The spine table can be currently stored in 3 different formats (explained below):
+- [Deprecated] Pandas DataFrame
+- H5 group of datasets
+- H5 dataset containing a compound type array
 
-### Spines' DataFrame
+In any case, `morph-spines` recognizes the format in which the spine table is stored and loads it
+into a Pandas DataFrame at runtime.
 
-The spines DataFrame contains information about the neuron spines. Each row represents a different
+### Spines table
+
+The spines table contains information about the neuron spines. Each row represents a different
 spine and each column describes a property. Therefore, the number of rows of the DataFrame equals
 the number of spines belonging to the neuron.
 
@@ -67,7 +72,33 @@ Additionally, we can have the following columns as optional:
 - `spine_volume`: Spine's head volume (type: float)
 - `spine_neck_diameter`: Spine's neck diameter (type: float)
 
-The presence of this dataset is mandatory.
+The presence of the spine table is mandatory.
+
+#### Spine table stored as Pandas Dataframe
+
+In this case, the DataFrame can be read and written through Panda's `pandas.DataFrame.read_hdf()`
+and `pandas.DataFrame.to_hdf()` respectively. The internal H5 representation is managed by the
+Pandas library.
+
+#### Spine table stored as group of datasets
+
+In this case, the spine table is stored column-wise, having one H5 dataset per column. The name of
+the dataset corresponds to the name of the column.
+
+All datasets must be stored under the same H5 group (usually, the neuron ID) and must have exactly
+the same length. Datasets cannot be multidimensional datasets: only 1-dimensional arrays and
+scalars are accepted.
+
+The H5 group can only contain the datasets representing spine table columns. No other subgroups or
+datasets with different length are allowed.
+
+#### Spine table stored as a compound type array
+
+In this case, the spine table is stored row-wise, having one single H5 dataset (usually called as
+the neuron ID). The compound type must have the name and the type of each column. Each row must
+contain values for all the columns of the spine table (i.e. all rows have the same fixed length).
+
+The supported data types are: numerical and fixed- and variable-length strings.
 
 
 ## `/morphology` group
