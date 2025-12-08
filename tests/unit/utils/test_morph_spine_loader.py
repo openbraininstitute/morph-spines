@@ -256,8 +256,8 @@ def test__load_spine_table_from_compound_dataset_obj_dtype(tmp_path):
     assert isinstance(df, pd.DataFrame)
     assert len(df.columns) == 1
     assert set(["objects"]) == set(df.columns)
-    assert str(df.loc[0, "objects"]) == str("obj1")
-    assert str(df.loc[1, "objects"]) == str("obj2")
+    assert str(df.loc[0, "objects"]) == "obj1"
+    assert str(df.loc[1, "objects"]) == "obj2"
 
 
 def test_load_soma(tmp_path):
