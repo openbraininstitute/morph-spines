@@ -11,7 +11,14 @@ import pandas as pd
 from neurom.core.morphology import Morphology
 from neurom.io.utils import load_morphology as neurom_load_morphology
 
-from morph_spines.core.h5_schema import GRP_EDGES, GRP_MORPH, GRP_SKELETONS, GRP_SPINES
+from morph_spines.core.h5_schema import (
+    ATT_VERSION,
+    GRP_EDGES,
+    GRP_METADATA,
+    GRP_MORPH,
+    GRP_SKELETONS,
+    GRP_SPINES,
+)
 from morph_spines.core.morphology_with_spines import MorphologyWithSpines
 from morph_spines.core.soma import Soma
 from morph_spines.core.spines import Spines
@@ -151,25 +158,55 @@ def _load_spine_table_from_datasets_group(filepath: str, name: str) -> pd.DataFr
     return pd.DataFrame(columns)
 
 
+def _get_spine_table_version(filepath: str, name: str) -> tuple[int, int]:
+    """Get the version of the spines table from metadata.
+
+    Returns a tuple with major and minor version of the spines table.
+    """
+    major = 0
+    minor = 1
+    with h5py.File(filepath, "r") as h5:
+        if GRP_METADATA not in h5[f"{GRP_EDGES}/{name}"].keys():
+            # If metadata group is not found, assume it's 0.1 version
+            return major, minor
+
+        metadata = h5[f"{GRP_EDGES}/{name}/{GRP_METADATA}"]
+        major, minor = metadata.attrs[ATT_VERSION]
+
+        return major, minor
+
+
 def load_spine_table(filepath: str, name: str) -> pd.DataFrame:
     """Load the spines table from a neuron morphology with spines representation.
 
     Returns the spines table as a pandas DataFrame.
     """
-    if _is_pandas_dataframe_group(filepath, name):
-        print(
-            "Warning: deprecated format: spine table stored as pandas DataFrame in HDF5 file.\n"
-            "Please, use the conversion script 'h5_dataframe_to_h5_struct_array.py' to update "
-            "the format."
-        )
-        spine_table = pd.read_hdf(filepath, key=name)
-        spine_table = spine_table.to_frame() if isinstance(spine_table, pd.Series) else spine_table
+    major, minor = _get_spine_table_version(filepath, name)
 
-    elif _is_datasets_group(filepath, name):
-        spine_table = _load_spine_table_from_datasets_group(filepath, name)
+    if major == 0 and minor == 1:
+        # Pandas DataFrame format
+        if not _is_pandas_dataframe_group(filepath, name):
+            raise TypeError(f"Could not find a valid spine table in {name} for version 0.1")
+        else:
+            print(
+                "Warning: deprecated format: spine table stored as pandas DataFrame in HDF5 file."
+                "\nPlease, use the conversion script 'h5_dataframe_to_h5_datasets_group.py' to "
+                "update the format."
+            )
+            spine_table = pd.read_hdf(filepath, key=name)
+            spine_table = spine_table.to_frame() if isinstance(spine_table, pd.Series) else spine_table
+
+    elif major == 1 and minor == 0:
+        # Group of datasets format
+        if not _is_datasets_group(filepath, name):
+            raise TypeError(f"Could not find a valid spine table in {name} for version 1.0")
+        else:
+            spine_table = _load_spine_table_from_datasets_group(filepath, name)
 
     else:
-        raise TypeError(f"Could not find a valid spine table in {name}")
+        raise TypeError(
+            f"Could not find a valid spine table in {name}. Unsupported version {major}.{minor}"
+        )
 
     return spine_table
 
@@ -177,7 +214,7 @@ def load_spine_table(filepath: str, name: str) -> pd.DataFrame:
 def load_spines(filepath: str, name: str | None = None, spines_are_centered: bool = True) -> Spines:
     """Load the spines from a neuron morphology with spines representation.
 
-    Loads the spines of a 'neuron morphology with spines' from a hdf5 archive.
+    Loads the spines of a 'neuron morphology with spines' from an HDF5 file.
     Returns the representation of the spines.
     """
     name = _resolve_morphology_name(filepath, name)

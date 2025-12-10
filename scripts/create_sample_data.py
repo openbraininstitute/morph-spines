@@ -5,13 +5,19 @@ from pathlib import Path
 import h5py
 import numpy as np
 
-morphology_filename = "morph_with_spines_schema.h5"
+morphology_filename = "morph_with_spines_schema_v1.0.h5"
 morphology_name = "01234"
 output_dir = Path(f"{Path(__file__).parent.parent}/tests/data")
 output_dir.mkdir(exist_ok=True)
 output_file = Path(f"{output_dir}/{morphology_filename}")
 
 random_spine_data = False
+
+spine_table_version = np.array([1, 0], dtype=np.uint32)
+neuron_morphology_version = np.array([1, 3], dtype=np.uint32)
+neuron_morphology_family = np.array([0], dtype=np.uint32)
+spine_morphology_version = np.array([1, 3], dtype=np.uint32) # FIXME: 1.4 once morphio supports it
+spine_morphology_family = np.array([0], dtype=np.uint32) # FIXME: 3 once morphio supports it
 
 # Group /edges
 dtypes = np.dtype(
@@ -111,6 +117,11 @@ with h5py.File(output_file, "w") as h5_file:
     # Create as many datasets as columns in the table
     spine_table_grp_name = str(f"/edges/{morphology_name}")
     spine_table_grp = edges_grp.create_group(spine_table_grp_name)
+    
+    # Spine table metadata
+    edges_metadata = spine_table_grp.create_group("metadata")
+    edges_metadata.attrs["version"] = spine_table_version
+    
     if data.dtype.names is not None:
         # We know it's not None, just making mypy happy
         for col_name in data.dtype.names:
@@ -120,6 +131,11 @@ with h5py.File(output_file, "w") as h5_file:
     # Group /morphology
     morph_grp = h5_file.create_group("morphology")
     morph_id = morph_grp.create_group(morphology_name)
+
+    # Morphology metadata
+    morph_metadata = morph_id.create_group("metadata")
+    morph_metadata.attrs["cell_family"] = neuron_morphology_family
+    morph_metadata.attrs["version"] = neuron_morphology_version
 
     morph_points = np.array(
         [
@@ -217,6 +233,11 @@ with h5py.File(output_file, "w") as h5_file:
     # Group /spines/skeletons
     spines_skel = spines_grp.create_group("skeletons")
     spines_skel_id = spines_skel.create_group(morphology_name)
+
+    # Spine skeleton metadata
+    spine_metadata = spines_skel_id.create_group("metadata")
+    spine_metadata.attrs["cell_family"] = spine_morphology_family
+    spine_metadata.attrs["version"] = spine_morphology_version
 
     points = np.array(
         [
