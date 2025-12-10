@@ -94,7 +94,7 @@ def _is_datasets_group(filepath: str, name: str) -> bool:
     The following conditions must be met:
     - 'name' must be a group inside the H5 file
     - 'name' group must contain at least one dataset
-    - 'name' group cannot contain other groups
+    - 'name' group cannot contain other groups, except for the 'metadata' group
     - All datasets within 'name' group must have the same size
     - All datasets within 'name' group cannot be multidimensional
     """
@@ -113,22 +113,24 @@ def _is_datasets_group(filepath: str, name: str) -> bool:
             return False
 
         dsets_len = []
-        for _key, item in df_group.items():
-            if not isinstance(item, h5py.Dataset):
-                return False
+        for key, item in df_group.items():
+            # Skip group metadata
+            if key != GRP_METADATA:
+                if not isinstance(item, h5py.Dataset):
+                    return False
 
-            # If dataset is a multidimensional array, return False
-            if len(item.shape) > 1:
-                return False
+                # If dataset is a multidimensional array, return False
+                if len(item.shape) > 1:
+                    return False
 
-            if item.shape == ():
-                # Scalar datasets
-                length = 0
-            else:
-                # 1-dimensional arrays
-                length = item.shape[0]
+                if item.shape == ():
+                    # Scalar datasets
+                    length = 0
+                else:
+                    # 1-dimensional arrays
+                    length = item.shape[0]
 
-            dsets_len.append(length)
+                dsets_len.append(length)
 
         # All dataset lengths must be the same
         if len(set(dsets_len)) == 1:
@@ -146,15 +148,16 @@ def _load_spine_table_from_datasets_group(filepath: str, name: str) -> pd.DataFr
     with h5py.File(filepath, "r") as h5:
         df_group = h5[name]
         for key in df_group.keys():
-            if df_group[key].shape == ():
-                # If it's a scalar type, create a 1-element array
-                col_data = np.array([df_group[key][()]])
-            else:
-                col_data = df_group[key][:]
-            # Convert byte strings into Python strings
-            if col_data.dtype.kind == "S" or col_data.dtype.kind == "O":
-                col_data = col_data.astype(str)
-            columns[str(key)] = col_data
+            if key != GRP_METADATA:
+                if df_group[key].shape == ():
+                    # If it's a scalar type, create a 1-element array
+                    col_data = np.array([df_group[key][()]])
+                else:
+                    col_data = df_group[key][:]
+                # Convert byte strings into Python strings
+                if col_data.dtype.kind == "S" or col_data.dtype.kind == "O":
+                    col_data = col_data.astype(str)
+                columns[str(key)] = col_data
     return pd.DataFrame(columns)
 
 
@@ -166,11 +169,13 @@ def _get_spine_table_version(filepath: str, name: str) -> tuple[int, int]:
     major = 0
     minor = 1
     with h5py.File(filepath, "r") as h5:
-        if GRP_METADATA not in h5[f"{GRP_EDGES}/{name}"].keys():
+        if not isinstance(h5[name], h5py.Group):
+            return 0, 0
+        if GRP_METADATA not in h5[name].keys():
             # If metadata group is not found, assume it's 0.1 version
             return major, minor
 
-        metadata = h5[f"{GRP_EDGES}/{name}/{GRP_METADATA}"]
+        metadata = h5[f"{name}/{GRP_METADATA}"]
         major, minor = metadata.attrs[ATT_VERSION]
 
         return major, minor
@@ -194,7 +199,9 @@ def load_spine_table(filepath: str, name: str) -> pd.DataFrame:
                 "update the format."
             )
             spine_table = pd.read_hdf(filepath, key=name)
-            spine_table = spine_table.to_frame() if isinstance(spine_table, pd.Series) else spine_table
+            spine_table = (
+                spine_table.to_frame() if isinstance(spine_table, pd.Series) else spine_table
+            )
 
     elif major == 1 and minor == 0:
         # Group of datasets format

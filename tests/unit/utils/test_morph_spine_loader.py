@@ -18,7 +18,7 @@ from morph_spines.utils.morph_spine_loader import (
 )
 
 SAMPLE_DATA_DIR = f"{Path(__file__).parent.parent}/data"
-SAMPLE_MORPH_WITH_SPINES_DATASET_FILE = f"{SAMPLE_DATA_DIR}/morph_with_spines_schema_datasets.h5"
+SAMPLE_MORPH_WITH_SPINES_DATASET_FILE = f"{SAMPLE_DATA_DIR}/morph_with_spines_schema_v1.0.h5"
 MORPH_WITH_SPINES_ID = "01234"
 
 
@@ -180,6 +180,8 @@ def test_load_spine_table_scalar_datasets(tmp_path):
         root_grp = h5.create_group("root_group")
         root_grp.create_dataset("scalar_int", data=2)
         root_grp.create_dataset("scalar_float", data=1.23)
+        metadata_grp = root_grp.create_group("metadata")
+        metadata_grp.attrs["version"] = np.array([1, 0], dtype=np.uint32)
     df = load_spine_table(str(f), "root_group")
 
     assert isinstance(df, pd.DataFrame)

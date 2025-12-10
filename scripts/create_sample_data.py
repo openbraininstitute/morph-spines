@@ -16,8 +16,8 @@ random_spine_data = False
 spine_table_version = np.array([1, 0], dtype=np.uint32)
 neuron_morphology_version = np.array([1, 3], dtype=np.uint32)
 neuron_morphology_family = np.array([0], dtype=np.uint32)
-spine_morphology_version = np.array([1, 3], dtype=np.uint32) # FIXME: 1.4 once morphio supports it
-spine_morphology_family = np.array([0], dtype=np.uint32) # FIXME: 3 once morphio supports it
+spine_morphology_version = np.array([1, 3], dtype=np.uint32)  # FIXME: 1.4 once morphio supports it
+spine_morphology_family = np.array([0], dtype=np.uint32)  # FIXME: 3 once morphio supports it
 
 # Group /edges
 dtypes = np.dtype(
@@ -117,11 +117,11 @@ with h5py.File(output_file, "w") as h5_file:
     # Create as many datasets as columns in the table
     spine_table_grp_name = str(f"/edges/{morphology_name}")
     spine_table_grp = edges_grp.create_group(spine_table_grp_name)
-    
+
     # Spine table metadata
     edges_metadata = spine_table_grp.create_group("metadata")
     edges_metadata.attrs["version"] = spine_table_version
-    
+
     if data.dtype.names is not None:
         # We know it's not None, just making mypy happy
         for col_name in data.dtype.names:
