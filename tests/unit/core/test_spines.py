@@ -10,8 +10,8 @@ from numpy.ma.testutils import assert_array_equal
 from morph_spines.core.spines import Spines
 
 SAMPLE_DATA_DIR = f"{Path(__file__).parent.parent}/data"
-SAMPLE_MORPH_WITH_SPINES_FILE = f"{SAMPLE_DATA_DIR}/morph_with_spines_schema_datasets.h5"
-SAMPLE_MORPH_WITH_SPINES_DATAFRAME_FILE = f"{SAMPLE_DATA_DIR}/morph_with_spines_schema_dataframe.h5"
+SAMPLE_MORPH_WITH_SPINES_FILE = f"{SAMPLE_DATA_DIR}/morph_with_spines_schema_v1.0.h5"
+SAMPLE_MORPH_WITH_SPINES_DATAFRAME_FILE = f"{SAMPLE_DATA_DIR}/morph_with_spines_schema_v0.1.h5"
 MORPH_WITH_SPINES_ID = "01234"
 
 

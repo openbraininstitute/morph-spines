@@ -7,7 +7,7 @@ from numpy.testing import assert_array_equal
 from morph_spines.core.soma import Soma
 
 SAMPLE_DATA_DIR = f"{Path(__file__).parent.parent}/data"
-SAMPLE_MORPH_WITH_SPINES_FILE = f"{SAMPLE_DATA_DIR}/morph_with_spines_schema_datasets.h5"
+SAMPLE_MORPH_WITH_SPINES_FILE = f"{SAMPLE_DATA_DIR}/morph_with_spines_schema_v1.0.h5"
 MORPH_WITH_SPINES_ID = "01234"
 EXPECTED_SOMA_VERTICES = np.array(
     [[0, 0, 1], [1, 0, 0], [0, 1, 0], [-1, 0, 0], [0, -1, 0], [0, 0, -1]]
