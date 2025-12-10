@@ -15,13 +15,12 @@ The `/edges` group contains one spine table for each neuron present in the file.
 is stored inside the neuron's ID subgroup, and it describes different properties related to the 
 neuron's spines.
 
-For example, for a neuron ID `"01234"`, the corresponding DataFrame will be stored under
+For example, for a neuron ID `"01234"`, the corresponding spine table will be stored under
 `/edges/01234`.
 
-The spine table can be currently stored in 3 different formats (explained below):
+The spine table can be currently stored in 2 different formats (explained below):
 - [Deprecated] Pandas DataFrame
 - H5 group of datasets
-- H5 dataset containing a compound type array
 
 In any case, `morph-spines` recognizes the format in which the spine table is stored and loads it
 into a Pandas DataFrame at runtime.
@@ -91,14 +90,6 @@ scalars are accepted.
 
 The H5 group can only contain the datasets representing spine table columns. No other subgroups or
 datasets with different length are allowed.
-
-#### Spine table stored as a compound type array
-
-In this case, the spine table is stored row-wise, having one single H5 dataset (usually called as
-the neuron ID). The compound type must have the name and the type of each column. Each row must
-contain values for all the columns of the spine table (i.e. all rows have the same fixed length).
-
-The supported data types are: numerical and fixed- and variable-length strings.
 
 
 ## `/morphology` group

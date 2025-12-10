@@ -151,53 +151,6 @@ def _load_spine_table_from_datasets_group(filepath: str, name: str) -> pd.DataFr
     return pd.DataFrame(columns)
 
 
-def _is_compound_dataset(filepath: str, name: str) -> bool:
-    """Check if an H5 dataset contains a compound type array.
-
-    The following conditions must be met:
-    - 'name' must be a dataset inside the H5 file
-    - 'name' dataset must be a compound type array
-    - Supported types inside the dataset are: numerical values and both fixed-length and
-    variable-length strings
-    """
-    with h5py.File(filepath, "r") as h5:
-        if name not in h5:
-            raise TypeError(f"Could not find {name} inside the H5 file")
-
-        dset = h5[name]
-        if not isinstance(dset, h5py.Dataset):
-            return False
-        if not isinstance(dset.dtype, np.dtype) or dset.dtype.names is None:
-            return False
-
-        return True
-
-
-def _load_spine_table_from_compound_dataset(filepath: str, name: str) -> pd.DataFrame:
-    """Load the spine table from an HDF5 compound type array as a pandas dataframe."""
-    with h5py.File(filepath, "r") as h5:
-        dset = h5[name]
-
-        # Must be a compound dataset
-        if not isinstance(dset.dtype, np.dtype) or dset.dtype.names is None:
-            raise TypeError(f"Dataset {name} is not a compound dataset")
-
-        data = dset[:]  # structured numpy array
-        columns = {}
-        for name in dset.dtype.names:
-            col = data[name]
-            if col.dtype.kind == "O":
-                # Handle variable-length UTF-8 strings (dtype = object)
-                col = col.astype(str)
-            elif col.dtype.kind == "S":
-                # Handle fixed-length ASCII/UTF-8 strings (dtype = 'Sxx')
-                col = col.astype(str)
-            # else: No conversion needed for numeric types
-            columns[name] = col
-
-        return pd.DataFrame(columns)
-
-
 def load_spine_table(filepath: str, name: str) -> pd.DataFrame:
     """Load the spines table from a neuron morphology with spines representation.
 
@@ -214,9 +167,6 @@ def load_spine_table(filepath: str, name: str) -> pd.DataFrame:
 
     elif _is_datasets_group(filepath, name):
         spine_table = _load_spine_table_from_datasets_group(filepath, name)
-
-    elif _is_compound_dataset(filepath, name):
-        spine_table = _load_spine_table_from_compound_dataset(filepath, name)
 
     else:
         raise TypeError(f"Could not find a valid spine table in {name}")

@@ -12,7 +12,6 @@ output_dir.mkdir(exist_ok=True)
 output_file = Path(f"{output_dir}/{morphology_filename}")
 
 random_spine_data = False
-spine_compound_type = False
 
 # Group /edges
 dtypes = np.dtype(
@@ -108,19 +107,15 @@ else:
 with h5py.File(output_file, "w") as h5_file:
     # Group /edges
     edges_grp = h5_file.create_group("edges")
-    if spine_compound_type:
-        # Create a single dataset table, compound type
-        spine_table_key = str(f"/edges/{morphology_name}")
-        edges_grp.create_dataset(spine_table_key, data=data)
-    else:
-        # Create as many datasets as columns in the table
-        spine_table_grp_name = str(f"/edges/{morphology_name}")
-        spine_table_grp = edges_grp.create_group(spine_table_grp_name)
-        if data.dtype.names is not None:
-            # We know it's not None, just making mypy happy
-            for col_name in data.dtype.names:
-                dset_name = str(f"{spine_table_grp_name}/{col_name}")
-                spine_table_grp.create_dataset(dset_name, data=data[col_name])
+
+    # Create as many datasets as columns in the table
+    spine_table_grp_name = str(f"/edges/{morphology_name}")
+    spine_table_grp = edges_grp.create_group(spine_table_grp_name)
+    if data.dtype.names is not None:
+        # We know it's not None, just making mypy happy
+        for col_name in data.dtype.names:
+            dset_name = str(f"{spine_table_grp_name}/{col_name}")
+            spine_table_grp.create_dataset(dset_name, data=data[col_name])
 
     # Group /morphology
     morph_grp = h5_file.create_group("morphology")
