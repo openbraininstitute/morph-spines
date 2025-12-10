@@ -10,7 +10,14 @@ import pandas
 from neurom.core.morphology import Morphology
 from neurom.io.utils import load_morphology as neurom_load_morphology
 
-from morph_spines.core.h5_schema import GRP_EDGES, GRP_MORPH, GRP_SKELETONS, GRP_SPINES
+from morph_spines.core.h5_schema import (
+    ATT_VERSION,
+    GRP_EDGES,
+    GRP_METADATA,
+    GRP_MORPH,
+    GRP_SKELETONS,
+    GRP_SPINES,
+)
 from morph_spines.core.morphology_with_spines import MorphologyWithSpines
 from morph_spines.core.soma import Soma
 from morph_spines.core.spines import Spines
@@ -63,29 +70,53 @@ def load_morphology(
     return Morphology(morphology, name, process_subtrees=process_subtrees)
 
 
+def _get_spine_table_version(filepath: str, name: str) -> tuple[int, int]:
+    """Get the version of the spines table from metadata.
+
+    Returns a tuple with major and minor version of the spines table.
+    """
+    major = 0
+    minor = 1
+    with h5py.File(filepath, "r") as h5:
+        if GRP_METADATA not in h5[f"{GRP_EDGES}/{name}"].keys():
+            # If metadata group is not found, assume it's 0.1 version
+            return major, minor
+
+        metadata = h5[f"{GRP_EDGES}/{name}/{GRP_METADATA}"]
+        major, minor = metadata.attrs[ATT_VERSION]
+
+        return major, minor
+
+
 def load_spines(filepath: str, name: str | None = None, spines_are_centered: bool = True) -> Spines:
     """Load the spines from a neuron morphology with spines representation.
 
-    Loads the spines of a 'neuron morphology with spines' from a hdf5 archive.
+    Loads the spines of a 'neuron morphology with spines' from an HDF5 file.
     Returns the representation of the spines.
     """
     name = _resolve_morphology_name(filepath, name)
-    spine_table = pandas.read_hdf(filepath, key=f"{GRP_EDGES}/{name}")
+    major, minor = _get_spine_table_version(filepath, name)
 
-    if not isinstance(spine_table, pandas.DataFrame):
-        raise TypeError(f"Expected DataFrame in HDF5 file, but got {type(spine_table).__name__}")
+    if major == 0 and minor == 1:
+        spine_table = pandas.read_hdf(filepath, key=f"{GRP_EDGES}/{name}")
 
-    coll = morphio.Collection(filepath)
-    centered_spine_skeletons = neurom_load_morphology(
-        coll.load(f"{GRP_SPINES}/{GRP_SKELETONS}/{name}")
-    )
-    return Spines(
-        filepath,
-        name,
-        spine_table,
-        centered_spine_skeletons,
-        spines_are_centered=spines_are_centered,
-    )
+        if not isinstance(spine_table, pandas.DataFrame):
+            raise TypeError(f"Expected DataFrame in H5 file, but got {type(spine_table).__name__}")
+
+        coll = morphio.Collection(filepath)
+        centered_spine_skeletons = neurom_load_morphology(
+            coll.load(f"{GRP_SPINES}/{GRP_SKELETONS}/{name}")
+        )
+        return Spines(
+            filepath,
+            name,
+            spine_table,
+            centered_spine_skeletons,
+            spines_are_centered=spines_are_centered,
+        )
+
+    else:
+        raise ValueError(f"Unsupported spine table version: {major}.{minor}")
 
 
 def load_soma(filepath: str, name: str | None = None) -> Soma:
