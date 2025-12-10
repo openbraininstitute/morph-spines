@@ -6,7 +6,7 @@ import pandas as pd
 import pytest
 
 from morph_spines import Soma
-from morph_spines.core.h5_schema import GRP_EDGES, GRP_MORPH, GRP_SPINES, GRP_SKELETONS
+from morph_spines.core.h5_schema import GRP_EDGES, GRP_MORPH, GRP_SKELETONS, GRP_SPINES
 from morph_spines.core.morphology_with_spines import MorphologyWithSpines
 from morph_spines.utils.morph_spine_loader import (
     _is_datasets_group,
@@ -123,7 +123,7 @@ def test__is_datasets_group_true_scalar_datasets(tmp_path):
 def test__is_datasets_group_false_no_group():
     assert not _is_datasets_group(
         SAMPLE_MORPH_WITH_SPINES_DATASET_FILE,
-        f"{GRP_SPINES}/{GRP_SKELETONS}/{MORPH_WITH_SPINES_ID}/points"
+        f"{GRP_SPINES}/{GRP_SKELETONS}/{MORPH_WITH_SPINES_ID}/points",
     )
 
 
