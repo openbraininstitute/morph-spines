@@ -20,7 +20,7 @@ For example, for a neuron ID `"01234"`, the corresponding spine table will be st
 
 The spine table can be currently stored in 2 different formats, explained below. The format is
 determined by the version inside the metadata group. The supported formats are:
-- [Deprecated] v0.1: Pandas DataFrame
+- [Deprecated] v0.1: Pandas DataFrame (support will be dropped as of morph-spines v1.0)
 - v1.0: H5 group of datasets
 
 In any case, `morph-spines` recognizes the format in which the spine table is stored through its
