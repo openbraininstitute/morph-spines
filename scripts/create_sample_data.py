@@ -6,7 +6,7 @@ import h5py
 import numpy as np
 import pandas as pd
 
-morphology_filename = "morph_with_spines_schema.h5"
+morphology_filename = "morph_with_spines_schema_v0.1.h5"
 morphology_name = "01234"
 output_dir = Path(f"{Path(__file__).parent.parent}/tests/data")
 output_dir.mkdir(exist_ok=True)
@@ -16,7 +16,7 @@ output_file = Path(f"{output_dir}/{morphology_filename}")
 # edges_grp = h5_file.create_group("edges")
 # edges_id = edges_grp.create_group(morphology_name)
 
-# Pandas dataframe columns (axis0)
+# Pandas dataframe columns
 columns = [
     "afferent_surface_x",
     "afferent_surface_y",
@@ -40,9 +40,10 @@ columns = [
     "afferent_section_pos",
 ]
 
-# Number of spines (axis1)
+# Number of spines
 num_spines = 2
 
+spine_table_version = np.array([0, 1], dtype=np.uint32)
 random_df_data = False
 
 if random_df_data:
@@ -102,6 +103,11 @@ key = str(f"/edges/{morphology_name}")
 df.to_hdf(output_file, key=key, mode="w")
 
 with h5py.File(output_file, "a") as h5_file:
+    # Spine table metadata (edges)
+    edges_grp = h5_file[f"edges/{morphology_name}"]
+    metadata = edges_grp.create_group("metadata")
+    metadata.attrs["version"] = spine_table_version
+
     # Group /morphology
     morph_grp = h5_file.create_group("morphology")
     morph_id = morph_grp.create_group(morphology_name)
