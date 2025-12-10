@@ -6,7 +6,7 @@ import pandas as pd
 import pytest
 
 from morph_spines import Soma
-from morph_spines.core.h5_schema import GRP_EDGES, GRP_MORPH
+from morph_spines.core.h5_schema import GRP_EDGES, GRP_MORPH, GRP_SPINES, GRP_SKELETONS
 from morph_spines.core.morphology_with_spines import MorphologyWithSpines
 from morph_spines.utils.morph_spine_loader import (
     _is_datasets_group,
@@ -69,6 +69,19 @@ def test__is_pandas_dataframe_group_true(tmp_path):
     assert _is_pandas_dataframe_group(str(f), "df")
 
 
+def test__is_pandas_dataframe_group_true_with_version(tmp_path):
+    f = tmp_path / "test.h5"
+    df = pd.DataFrame([[1, 2], [3, 4]])
+    df.to_hdf(f, key="df", mode="w")
+
+    with h5py.File(f, "a") as h5:
+        root_grp = h5["df"]
+        metadata_grp = root_grp.create_group("metadata")
+        metadata_grp.attrs["version"] = np.array([0, 1], dtype=np.uint32)
+
+    assert _is_pandas_dataframe_group(str(f), "df")
+
+
 def test__is_pandas_dataframe_group_invalid(tmp_path):
     f = tmp_path / "test.h5"
     with h5py.File(f, "w") as h5:
@@ -80,6 +93,15 @@ def test__is_pandas_dataframe_group_invalid(tmp_path):
 
 def test__is_pandas_dataframe_group_false():
     assert not _is_pandas_dataframe_group(SAMPLE_MORPH_WITH_SPINES_DATASET_FILE, GRP_EDGES)
+
+
+def test__is_pandas_dataframe_group_false_no_group(tmp_path):
+    f = tmp_path / "test.h5"
+    with h5py.File(f, "w") as h5:
+        grp = h5.create_group("root_group")
+        grp.create_dataset("dataset", data=np.array([1, 2, 3, 4]))
+
+    assert not _is_pandas_dataframe_group(str(f), "root_group/dataset")
 
 
 def test__is_datasets_group_true_1dim_datasets():
@@ -99,7 +121,10 @@ def test__is_datasets_group_true_scalar_datasets(tmp_path):
 
 
 def test__is_datasets_group_false_no_group():
-    assert not _is_datasets_group(SAMPLE_MORPH_WITH_SPINES_DATASET_FILE, "/")
+    assert not _is_datasets_group(
+        SAMPLE_MORPH_WITH_SPINES_DATASET_FILE,
+        f"{GRP_SPINES}/{GRP_SKELETONS}/{MORPH_WITH_SPINES_ID}/points"
+    )
 
 
 def test__is_datasets_group_false_empty_group(tmp_path):
@@ -204,6 +229,30 @@ def test_load_spine_table_invalid(tmp_path):
 
     with pytest.raises(TypeError):
         load_spine_table(str(f), f"{GRP_EDGES}/np_array")
+
+
+def test_load_spine_table_invalid_with_version01(tmp_path):
+    f = tmp_path / "test.h5"
+    with h5py.File(f, "w") as h5:
+        grp = h5.create_group(GRP_EDGES)
+        grp.create_dataset("np_array", data=np.array([[1, 2], [3, 4]]))
+        metadata_grp = grp.create_group("metadata")
+        metadata_grp.attrs["version"] = np.array([0, 1], dtype=np.uint32)
+
+    with pytest.raises(TypeError):
+        load_spine_table(str(f), f"{GRP_EDGES}")
+
+
+def test_load_spine_table_invalid_with_version10(tmp_path):
+    f = tmp_path / "test.h5"
+    with h5py.File(f, "w") as h5:
+        grp = h5.create_group(GRP_EDGES)
+        grp.create_dataset("np_array", data=np.array([[1, 2], [3, 4]]))
+        metadata_grp = grp.create_group("metadata")
+        metadata_grp.attrs["version"] = np.array([1, 0], dtype=np.uint32)
+
+    with pytest.raises(TypeError):
+        load_spine_table(str(f), f"{GRP_EDGES}")
 
 
 def test_load_soma(tmp_path):
