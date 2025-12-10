@@ -20,6 +20,16 @@ For example, for a neuron ID `"01234"`, the corresponding DataFrame will be stor
 The DataFrame can be read and written through Panda's `pandas.DataFrame.read_hdf()` and 
 `pandas.DataFrame.to_hdf()` respectively.
 
+In addition to the DataFrame, there is another group under the neuron's ID subgroup called
+`metadata` which contains the version (in major.minor format) of the spines table. The version is
+stored as an attribute of the group with the name `version` and it is represented as an array of
+unsigned integers. The presence of this group is mandatory.
+
+This documentation refers to the version 0.1 of the spines table.
+
+Following the example above, the metadata would be stored as a group called
+`/edges/01234/metadata` with a `version` attribute containing an array with `[0, 1]`.
+
 ### Spines' DataFrame
 
 The spines DataFrame contains information about the neuron spines. Each row represents a different
@@ -79,10 +89,11 @@ For example, for a neuron ID `"01234"`, the corresponding morphology structure w
 
 The contents of each subgroup follow the morphology structure described in 
 [H5 v1](https://morphology-documentation.readthedocs.io/en/latest/h5v1.html). However, only the 
-`/points` and `/structure` datasets are present. Following the example above, there would be two 
-datasets: `/morphology/01234/points` and `/morphology/01234/structure`.
+`metadata`, `/points` and `/structure` datasets are present. Following the example above, there
+would be three datasets: `/morphology/01234/metadata`, `/morphology/01234/points` and
+`/morphology/01234/structure`.
 
-The presence of neuron morphology datasets (`/points` and `/structure`) is mandatory.
+The presence of neuron morphology datasets (`/metadata`, `/points` and `/structure`) is mandatory.
 
 
 ## `/soma` group
@@ -165,7 +176,8 @@ spine skeletons will be stored under `/spines/skeletons/01234`.
 
 The format of the skeletons complies to the aforementioned H5 v1 morphology structure: 
 [H5 v1](https://morphology-documentation.readthedocs.io/en/latest/h5v1.html). However, only the 
-`/points` and `/structure` datasets are present. Following the example above, there would be two 
-datasets: `/spines/skeletons/01234/points` and `/spines/skeletons/01234/structure`.
+`/metadata`, `/points` and `/structure` datasets are present. Following the example above, there
+would be three datasets: `/spines/skeletons/01234/metadata`, `/spines/skeletons/01234/points` and
+`/spines/skeletons/01234/structure`.
 
-The presence of spine skeletons datasets (`/points` and `/structure`) is mandatory.
+The presence of spine skeletons datasets (`/metadata`, `/points` and `/structure`) is mandatory.
