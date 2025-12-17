@@ -15,16 +15,15 @@ from scipy.spatial.transform import Rotation
 
 from morph_spines.core.h5_schema import (
     COL_AFF_SEC,
-    COL_ROTATION,
     COL_SPINE_ID,
     COL_SPINE_MESH,
-    COL_TRANSLATION,
     GRP_MESHES,
     GRP_OFFSETS,
     GRP_SPINES,
     GRP_TRIANGLES,
     GRP_VERTICES,
 )
+from morph_spines.utils import geometry
 
 
 class Spines:
@@ -65,11 +64,7 @@ class Spines:
         (origin near its root, y-axis pointing towards its tip) to the
         global coordinate system of the neuron.
         """
-        spine_row = self.spine_table.loc[spine_loc]
-        spine_rotation = Rotation.from_quat(spine_row[COL_ROTATION].to_numpy(dtype=float))
-        spine_transformation = spine_row[COL_TRANSLATION].to_numpy(dtype=float)
-
-        return spine_rotation, spine_transformation
+        return geometry.spine_transformations(self.spine_table, spine_loc)
 
     def transform_for_spine(self, spine_loc: int, spine_points: NDArray) -> NDArray:
         """Apply spine coordinate system transformations.
@@ -77,8 +72,7 @@ class Spines:
         Apply the transformation from the local spine coordinate system
         to the global neuron coordinate system to a set of points.
         """
-        spine_rotation, spine_transformation = self.spine_transformations(spine_loc)
-        return spine_rotation.apply(spine_points) + spine_transformation.reshape((1, -1))
+        return geometry.transform_for_spine(self.spine_table, spine_loc, spine_points)
 
     def _transform_spine_skeletons(self) -> Morphology:
         """Apply transformations to spine skeletons.
@@ -125,14 +119,15 @@ class Spines:
         _spine_id = int(_spine_row[COL_SPINE_ID])
 
         with h5py.File(self._filepath, "r") as h5_file:
-            group = h5_file[GRP_SPINES][GRP_MESHES][_spine_mesh_grp]  # [_spine_id_grp]
+            group = h5_file[GRP_SPINES][GRP_MESHES][_spine_mesh_grp]
             vertex_start = group[GRP_OFFSETS][_spine_id, 0]
             vertex_end = group[GRP_OFFSETS][_spine_id + 1, 0]
             spine_points = group[GRP_VERTICES][vertex_start:vertex_end].astype(float)
 
-        if not transform:
-            return spine_points
-        return self.transform_for_spine(spine_loc, spine_points)
+        if transform:
+            spine_points = geometry.transform_for_spine(self.spine_table, spine_loc, spine_points)
+
+        return spine_points
 
     def spine_mesh_triangles(self, spine_loc: int) -> NDArray:
         """Triangles of spine mesh.
