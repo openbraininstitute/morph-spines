@@ -233,7 +233,6 @@ def main() -> None:
     """Main function.
 
     Returns: None
-
     """
     if len(sys.argv) != 3:
         raise RuntimeError(

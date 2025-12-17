@@ -139,10 +139,10 @@ class Spines:
         _spine_mesh_grp = _spine_row[COL_SPINE_MESH]
         _spine_id = int(_spine_row[COL_SPINE_ID])
         with h5py.File(self._filepath, "r") as h5_file:
-            group = h5_file[GRP_SPINES][GRP_MESHES][_spine_mesh_grp]  # [_spine_id_grp]
-            vertex_start = group[GRP_OFFSETS][_spine_id, 1]
-            vertex_end = group[GRP_OFFSETS][_spine_id + 1, 1]
-            triangles = group[GRP_TRIANGLES][vertex_start:vertex_end].astype(int)
+            group = h5_file[GRP_SPINES][GRP_MESHES][_spine_mesh_grp]
+            triangle_start = group[GRP_OFFSETS][_spine_id, 1]
+            triangle_end = group[GRP_OFFSETS][_spine_id + 1, 1]
+            triangles = group[GRP_TRIANGLES][triangle_start:triangle_end].astype(int)
         return triangles
 
     def spine_mesh_points(self, spine_loc: int) -> NDArray:
