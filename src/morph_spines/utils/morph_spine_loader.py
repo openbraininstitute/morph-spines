@@ -8,20 +8,26 @@ import h5py
 import morphio
 import numpy as np
 import pandas as pd
+import trimesh
 from neurom.core.morphology import Morphology
 from neurom.io.utils import load_morphology as neurom_load_morphology
 
 from morph_spines.core.h5_schema import (
     ATT_VERSION,
     GRP_EDGES,
+    GRP_MESHES,
     GRP_METADATA,
     GRP_MORPH,
+    GRP_OFFSETS,
     GRP_SKELETONS,
     GRP_SPINES,
+    GRP_TRIANGLES,
+    GRP_VERTICES,
 )
 from morph_spines.core.morphology_with_spines import MorphologyWithSpines
 from morph_spines.core.soma import Soma
 from morph_spines.core.spines import Spines
+from morph_spines.utils import geometry
 
 
 def _resolve_morphology_name(morphology_filepath: str, morphology_name: str | None = None) -> str:
@@ -49,6 +55,7 @@ def load_morphology_with_spines(
     morphology_name: str | None = None,
     spines_are_centered: bool = True,
     process_subtrees: bool = False,
+    load_meshes: bool = False,
 ) -> MorphologyWithSpines:
     """Load a neuron morphology with spines.
 
@@ -57,7 +64,7 @@ def load_morphology_with_spines(
     """
     morphology = load_morphology(morphology_filepath, morphology_name, process_subtrees)
     soma = load_soma(morphology_filepath, morphology_name)
-    spines = load_spines(morphology_filepath, morphology_name, spines_are_centered)
+    spines = load_spines(morphology_filepath, morphology_name, spines_are_centered, load_meshes)
     return MorphologyWithSpines(morphology, soma, spines)
 
 
@@ -218,7 +225,49 @@ def load_spine_table(filepath: str, name: str) -> pd.DataFrame:
     return spine_table
 
 
-def load_spines(filepath: str, name: str | None = None, spines_are_centered: bool = True) -> Spines:
+def load_spine_meshes_for_morphology(
+    filepath: str,
+    morphology_name: str,
+    spines_are_centered: bool,
+    spine_table: pd.DataFrame,
+) -> list[trimesh.Trimesh]:
+    """Get all the spine meshes of the morphology.
+
+    An array of spine meshes is returned. The meshes are already rotated and translated with
+    respect to the global morphology coordinates. There is an implicit index for each spine
+    mesh that matches the spine index order from the spine table.
+    """
+    # Read all the datasets at once and store them in memory
+    with h5py.File(filepath, "r") as h5_file:
+        morphology_meshes = h5_file[GRP_SPINES][GRP_MESHES][morphology_name]
+        all_spine_triangles = np.array(morphology_meshes[GRP_TRIANGLES].astype(int))
+        all_spine_vertices = np.array(morphology_meshes[GRP_VERTICES].astype(float))
+        all_spine_offsets = np.array(morphology_meshes[GRP_OFFSETS].astype(int))
+
+    # Split meshes according to their spine index
+    all_spine_meshes = list()
+    # We can infer the number of spines directly from the offsets array, minus one
+    for spine_idx in range(all_spine_offsets.shape[0] - 1):
+        vertex_start = all_spine_offsets[spine_idx, 0]
+        vertex_end = all_spine_offsets[spine_idx + 1, 0]
+        spine_vertices = all_spine_vertices[vertex_start:vertex_end]
+        if spines_are_centered:
+            spine_vertices = geometry.transform_for_spine(spine_table, spine_idx, spine_vertices)
+        triangle_start = all_spine_offsets[spine_idx, 1]
+        triangle_end = all_spine_offsets[spine_idx + 1, 1]
+        spine_triangles = all_spine_triangles[triangle_start:triangle_end]
+        spine_mesh = trimesh.Trimesh(vertices=spine_vertices, faces=spine_triangles)
+        all_spine_meshes.append(spine_mesh)
+
+    return all_spine_meshes
+
+
+def load_spines(
+    filepath: str,
+    name: str | None = None,
+    spines_are_centered: bool = True,
+    load_meshes: bool = False,
+) -> Spines:
     """Load the spines from a neuron morphology with spines representation.
 
     Loads the spines of a 'neuron morphology with spines' from an HDF5 file.
@@ -233,12 +282,20 @@ def load_spines(filepath: str, name: str | None = None, spines_are_centered: boo
     centered_spine_skeletons = neurom_load_morphology(
         coll.load(f"{GRP_SPINES}/{GRP_SKELETONS}/{name}")
     )
+
+    spine_meshes = (
+        load_spine_meshes_for_morphology(filepath, name, spines_are_centered, spine_table)
+        if load_meshes
+        else None
+    )
+
     return Spines(
         filepath,
         name,
         spine_table,
         centered_spine_skeletons,
         spines_are_centered=spines_are_centered,
+        spine_meshes=spine_meshes,
     )
 
 

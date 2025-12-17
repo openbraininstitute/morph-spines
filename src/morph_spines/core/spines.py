@@ -36,6 +36,7 @@ class Spines:
         spine_table: pandas.DataFrame,
         centered_spine_skeletons: Morphology,
         spines_are_centered: bool = True,
+        spine_meshes: list[trimesh.Trimesh] | None = None,
     ) -> None:
         """Default constructor.
 
@@ -46,6 +47,7 @@ class Spines:
         self.spine_table = spine_table
         self._centered_spine_skeletons = centered_spine_skeletons
         self._spines_are_centered = spines_are_centered
+        self._spine_meshes = spine_meshes if spine_meshes is not None else []
 
         if self._spines_are_centered:
             self._spine_skeletons = self._transform_spine_skeletons()
@@ -232,3 +234,20 @@ class Spines:
         Meshes are transformed to be centered and upright.
         """
         return trimesh.util.concatenate(self.centered_spine_meshes_for_section(section_id))
+
+    def spine_meshes_for_morphology(self) -> list[trimesh.Trimesh]:
+        """Return all the spine meshes of the morphology.
+
+        An array of spine meshes is returned. The meshes are already rotated and translated with
+        respect to the global morphology coordinates. There is an implicit index for each spine
+        mesh that matches the spine index order from the spine table.
+        """
+        return self._spine_meshes
+
+    def compound_spine_meshes_for_morphology(self) -> trimesh.Trimesh:
+        """Return all the spine meshes of the morphology unified into a single mesh.
+
+        The mesh is already rotated and translated with respect to the global morphology
+        coordinates.
+        """
+        return trimesh.util.concatenate(self.spine_meshes_for_morphology())
