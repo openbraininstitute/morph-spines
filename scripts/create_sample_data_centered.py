@@ -1,6 +1,6 @@
 """This script creates a morphology-with-spines file with fake sample data.
 
-See: <python create_sample_data.py -h> for help on usage.
+See: <python create_sample_data_centered.py -h> for help on usage.
 """
 
 import argparse
@@ -45,11 +45,12 @@ dtypes = np.dtype(
 )
 
 
-def generate_random_spine_data(neuron_name: str, num_spines: int) -> NDArray:
+def generate_random_spine_data(neuron_name: str, neuron_idx: int, num_spines: int) -> NDArray:
     """Create a 2D array with random spine data.
 
     Args:
         neuron_name: Morphology ID for which the data will be generated
+        neuron_idx: index of the neuron
         num_spines: number of spines
 
     Returns: 2-dimensional array with random spine data
@@ -62,22 +63,28 @@ def generate_random_spine_data(neuron_name: str, num_spines: int) -> NDArray:
     data["afferent_surface_y"] = np.random.random(num_spines)
     data["afferent_surface_z"] = np.random.random(num_spines)
 
-    data["afferent_center_x"] = np.random.random(num_spines)
-    data["afferent_center_y"] = np.random.random(num_spines)
-    data["afferent_center_z"] = np.random.random(num_spines)
+    afferent_center = [
+        np.array([2.0, 5.0], dtype=np.float64),  # X
+        np.array([2.0, 5.0], dtype=np.float64),  # Y
+        np.array([3.0, 7.0], dtype=np.float64),  # Z
+    ]
+    afferent_center[0] += np.array([neuron_idx] * num_spines, dtype=np.float64)
+    data["afferent_center_x"] = afferent_center[0][:num_spines]
+    data["afferent_center_y"] = afferent_center[1][:num_spines]
+    data["afferent_center_z"] = afferent_center[2][:num_spines]
 
     data["spine_id"] = np.array(range(num_spines), dtype=np.int64)
     data["spine_morphology"] = np.array([neuron_name] * num_spines, dtype="S32")
     data["spine_length"] = np.random.random(num_spines)
 
-    data["spine_orientation_vector_x"] = np.random.random(num_spines)
-    data["spine_orientation_vector_y"] = np.random.random(num_spines)
-    data["spine_orientation_vector_z"] = np.random.random(num_spines)
+    data["spine_orientation_vector_x"] = np.array([0.0] * num_spines, dtype=np.float64)
+    data["spine_orientation_vector_y"] = np.array([0.0] * num_spines, dtype=np.float64)
+    data["spine_orientation_vector_z"] = np.array([1.0] * num_spines, dtype=np.float64)
 
-    data["spine_rotation_x"] = np.random.random(num_spines)
-    data["spine_rotation_y"] = np.random.random(num_spines)
-    data["spine_rotation_z"] = np.random.random(num_spines)
-    data["spine_rotation_w"] = np.random.random(num_spines)
+    data["spine_rotation_x"] = np.array([0.0] * num_spines, dtype=np.float64)
+    data["spine_rotation_y"] = np.array([0.0] * num_spines, dtype=np.float64)
+    data["spine_rotation_z"] = np.array([0.0] * num_spines, dtype=np.float64)
+    data["spine_rotation_w"] = np.array([1.0] * num_spines, dtype=np.float64)
 
     data["afferent_section_id"] = np.random.randint(num_spines)
     data["afferent_segment_id"] = np.random.randint(num_spines)
@@ -87,11 +94,12 @@ def generate_random_spine_data(neuron_name: str, num_spines: int) -> NDArray:
     return data
 
 
-def generate_spine_data(neuron_name: str, num_spines: int) -> NDArray:
+def generate_spine_data(neuron_name: str, neuron_idx: int, num_spines: int) -> NDArray:
     """Create a 2D array with pre-defined values for spine data.
 
     Args:
         neuron_name: Morphology ID for which the data will be generated
+        neuron_idx: index of the neuron
         num_spines: number of spines
 
     Returns: 2-dimensional array with pre-defined values for spine data
@@ -101,26 +109,42 @@ def generate_spine_data(neuron_name: str, num_spines: int) -> NDArray:
 
     spines = np.arange(1, num_spines + 1, dtype=np.int64)
 
-    data["afferent_surface_x"] = np.array(0.1 * spines, dtype=np.float64)
-    data["afferent_surface_y"] = np.array(0.1 * spines + spines / 100, dtype=np.float64)
-    data["afferent_surface_z"] = np.array(0.1 * spines + spines / 1000, dtype=np.float64)
+    afferent_surface = [
+        np.array([2.0, 5.0], dtype=np.float64),  # X
+        np.array([2.0, 5.0], dtype=np.float64),  # Y
+        np.array([3.0, 7.0], dtype=np.float64),  # Z
+    ]
+    afferent_surface[0] += np.array([neuron_idx] * num_spines, dtype=np.float64)
+    data["afferent_surface_x"] = afferent_surface[0][:num_spines]
+    data["afferent_surface_y"] = afferent_surface[1][:num_spines]
+    data["afferent_surface_z"] = afferent_surface[2][:num_spines]
 
-    data["afferent_center_x"] = np.array(1.0 * spines + spines, dtype=np.float64)
-    data["afferent_center_y"] = np.array(1.0 * spines + spines * 10, dtype=np.float64)
-    data["afferent_center_z"] = np.array(1.0 * spines + spines * 100, dtype=np.float64)
+    # data["afferent_surface_x"] = np.array(0.1 * spines, dtype=np.float64)
+    # data["afferent_surface_y"] = np.array(0.1 * spines + spines / 100, dtype=np.float64)
+    # data["afferent_surface_z"] = np.array(0.1 * spines + spines / 1000, dtype=np.float64)
+
+    afferent_center = [
+        np.array([2.0, 5.0], dtype=np.float64),  # X
+        np.array([2.0, 5.0], dtype=np.float64),  # Y
+        np.array([3.0, 7.0], dtype=np.float64),  # Z
+    ]
+    afferent_center[0] += np.array([neuron_idx] * num_spines, dtype=np.float64)
+    data["afferent_center_x"] = afferent_center[0][:num_spines]
+    data["afferent_center_y"] = afferent_center[1][:num_spines]
+    data["afferent_center_z"] = afferent_center[2][:num_spines]
 
     data["spine_id"] = np.arange(num_spines, dtype=np.int64)
     data["spine_morphology"] = np.array([neuron_name] * num_spines, dtype="S32")
     data["spine_length"] = spines.astype(np.float64)
 
-    data["spine_orientation_vector_x"] = np.array(0.1234 * spines, dtype=np.float64)
-    data["spine_orientation_vector_y"] = np.array(0.2345 * spines, dtype=np.float64)
-    data["spine_orientation_vector_z"] = np.array(0.3456 * spines, dtype=np.float64)
+    data["spine_orientation_vector_x"] = np.array([0.0] * num_spines, dtype=np.float64)
+    data["spine_orientation_vector_y"] = np.array([0.0] * num_spines, dtype=np.float64)
+    data["spine_orientation_vector_z"] = np.array([1.0] * num_spines, dtype=np.float64)
 
-    data["spine_rotation_x"] = np.array(0.4567 * spines, dtype=np.float64)
-    data["spine_rotation_y"] = np.array(0.5678 * spines, dtype=np.float64)
-    data["spine_rotation_z"] = np.array(0.6789 * spines, dtype=np.float64)
-    data["spine_rotation_w"] = np.array(0.7891 * spines, dtype=np.float64)
+    data["spine_rotation_x"] = np.array([0.0] * num_spines, dtype=np.float64)
+    data["spine_rotation_y"] = np.array([0.0] * num_spines, dtype=np.float64)
+    data["spine_rotation_z"] = np.array([0.0] * num_spines, dtype=np.float64)
+    data["spine_rotation_w"] = np.array([1.0] * num_spines, dtype=np.float64)
 
     data["afferent_section_id"] = np.array(10 + spines, dtype=np.int64)
     data["afferent_segment_id"] = np.array(100 + spines, dtype=np.int64)
@@ -207,10 +231,10 @@ def generate_spine_skeletons(neuron_idx: int, num_spines: int) -> dict[str, np.n
 
     points = np.array(
         [
-            [2, 2, 2, 0.1],  # spine 0 start (x, y, z, d)
-            [2, 2, 4, 2.0],  # spine 0 end (x, y, z, d)
-            [5, 5, 5, 0.1],  # spine 1 start (x, y, z, d)
-            [5, 5, 9, 2.0],  # spine 1 end (x, y, z, d)
+            [0, 0, 0, 0.1],  # spine 0 start (x, y, z, d)
+            [0, 0, 2, 2.0],  # spine 0 end (x, y, z, d)
+            [0, 0, 0, 0.1],  # spine 1 start (x, y, z, d)
+            [0, 0, 4, 2.0],  # spine 1 end (x, y, z, d)
         ]
     )
 
@@ -271,24 +295,24 @@ def generate_spine_meshes(neuron_idx: int, num_spines: int) -> dict[str, np.ndar
             [0, 4, 3],
             [0, 1, 4],
             [1, 2, 3],
-            [1, 3, 4],  # end of square-based pyramid shaped spine, apex at (2, 2, 2)
+            [1, 3, 4],  # end of square-based pyramid shaped spine
             [0, 1, 2],
             [0, 2, 3],
             [0, 3, 1],
-            [1, 3, 2],  # end of triangle-based pyramid shaped spine, apex at (5, 5, 5)
+            [1, 3, 2],  # end of triangle-based pyramid shaped spine
         ]
     )
     vertices = np.array(
         [
-            [2, 2, 2],
-            [3, 2, 4],
-            [2, 3, 4],
-            [1, 2, 4],
-            [2, 1, 4],  # end of square-based pyramid shaped spine, apex at (2, 2, 2)
-            [5, 5, 5],
-            [5, 7, 9],
-            [7, 3, 9],
-            [3, 3, 9],  # end of triangle-based pyramid shaped spine, apex at (5, 5, 5)
+            [0, 0, -1],
+            [1, 0, 1],
+            [0, 1, 1],
+            [-1, 0, 1],
+            [0, -1, 1],  # end of square-based pyramid shaped spine
+            [0, 0, -2],
+            [0, 2, 2],
+            [2, -2, 2],
+            [-2, -2, 2],  # end of triangle-based pyramid shaped spine
         ]
     )
 
@@ -390,7 +414,7 @@ def write_neuron_data(output_file: str, neuron_name: str, data: dict) -> None:
     print(f'Successfully added morphology-with-spines "{neuron_name}".')
 
 
-def create_sample_data(
+def create_sample_data_centered(
     output_file: str, num_neurons: int = 1, num_spines: int = 2, random_data: bool = False
 ):
     """Generate the sample data and write it to the given output file.
@@ -406,9 +430,9 @@ def create_sample_data(
     for i in range(num_neurons):
         neuron_name = f"neuron_{i}"
         if random_data:
-            spine_table = generate_random_spine_data(neuron_name, num_spines)
+            spine_table = generate_random_spine_data(neuron_name, i, num_spines)
         else:
-            spine_table = generate_spine_data(neuron_name, num_spines)
+            spine_table = generate_spine_data(neuron_name, i, num_spines)
 
         neuron_skeleton = generate_neuron_skeleton(i)
         soma_mesh = generate_soma_mesh(i)
@@ -456,7 +480,7 @@ def main() -> None:
     print("Number of spines per neuron:", args.nspines)
     print("Random data enabled:", args.random_data)
 
-    create_sample_data(args.output, args.nneurons, args.nspines, args.random_data)
+    create_sample_data_centered(args.output, args.nneurons, args.nspines, args.random_data)
 
 
 if __name__ == "__main__":

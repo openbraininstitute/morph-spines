@@ -4,6 +4,8 @@ import h5py
 import numpy as np
 import pandas as pd
 import pytest
+import trimesh
+from numpy.testing import assert_array_equal
 
 from morph_spines import Soma
 from morph_spines.core.h5_schema import GRP_EDGES, GRP_MORPH, GRP_SKELETONS, GRP_SPINES
@@ -14,11 +16,15 @@ from morph_spines.utils.morph_spine_loader import (
     _resolve_morphology_name,
     load_morphology_with_spines,
     load_soma,
+    load_spine_meshes_for_morphology,
     load_spine_table,
 )
 
 SAMPLE_DATA_DIR = f"{Path(__file__).parent.parent}/data"
 SAMPLE_MORPH_WITH_SPINES_DATASET_FILE = f"{SAMPLE_DATA_DIR}/morph_with_spines_schema_v1.0.h5"
+SAMPLE_MORPH_WITH_SPINES_CENTERED_DATASET_FILE = (
+    f"{SAMPLE_DATA_DIR}/morph_with_spines_centered_schema_v1.0.h5"
+)
 MORPH_WITH_SPINES_ID = "01234"
 
 
@@ -255,6 +261,60 @@ def test_load_spine_table_invalid_with_version10(tmp_path):
         load_spine_table(str(f), f"{GRP_EDGES}")
 
 
+def test_load_spine_meshes_for_morphology():
+    spine_table = load_spine_table(
+        SAMPLE_MORPH_WITH_SPINES_DATASET_FILE, f"{GRP_EDGES}/{MORPH_WITH_SPINES_ID}"
+    )
+
+    meshes = load_spine_meshes_for_morphology(
+        SAMPLE_MORPH_WITH_SPINES_DATASET_FILE,
+        MORPH_WITH_SPINES_ID,
+        spines_are_centered=False,
+        spine_table=spine_table,
+    )
+
+    triangles_ref = [
+        np.array([[0, 2, 1], [0, 3, 2], [0, 4, 3], [0, 1, 4], [1, 2, 3], [1, 3, 4]], dtype=int),
+        np.array([[0, 1, 2], [0, 2, 3], [0, 3, 1], [1, 3, 2]], dtype=int),
+    ]
+    vertices_ref = [
+        np.array([[2, 2, 2], [3, 2, 4], [2, 3, 4], [1, 2, 4], [2, 1, 4]], dtype=float),
+        np.array([[5, 5, 5], [5, 7, 9], [7, 3, 9], [3, 3, 9]], dtype=float),
+    ]
+
+    for spine in range(len(meshes)):
+        assert_array_equal(meshes[spine].faces, triangles_ref[spine])
+        assert_array_equal(meshes[spine].vertices, vertices_ref[spine])
+
+
+def test_load_spine_meshes_for_morphology_centered():
+    spine_table = load_spine_table(
+        SAMPLE_MORPH_WITH_SPINES_CENTERED_DATASET_FILE, f"{GRP_EDGES}/{MORPH_WITH_SPINES_ID}"
+    )
+
+    meshes = load_spine_meshes_for_morphology(
+        SAMPLE_MORPH_WITH_SPINES_CENTERED_DATASET_FILE,
+        MORPH_WITH_SPINES_ID,
+        spines_are_centered=True,
+        spine_table=spine_table,
+    )
+
+    triangles_ref = [
+        np.array([[0, 2, 1], [0, 3, 2], [0, 4, 3], [0, 1, 4], [1, 2, 3], [1, 3, 4]], dtype=int),
+        np.array([[0, 1, 2], [0, 2, 3], [0, 3, 1], [1, 3, 2]], dtype=int),
+    ]
+    vertices_ref = [
+        np.array([[2, 2, 2], [3, 2, 4], [2, 3, 4], [1, 2, 4], [2, 1, 4]], dtype=float),
+        np.array([[5, 5, 5], [5, 7, 9], [7, 3, 9], [3, 3, 9]], dtype=float),
+    ]
+
+    for spine in range(len(meshes)):
+        print(f"vertices: {meshes[spine].vertices}")
+        print(f"vs: {vertices_ref[spine]}")
+        assert_array_equal(meshes[spine].faces, triangles_ref[spine])
+        assert_array_equal(meshes[spine].vertices, vertices_ref[spine])
+
+
 def test_load_soma(tmp_path):
     soma = load_soma(SAMPLE_MORPH_WITH_SPINES_DATASET_FILE, MORPH_WITH_SPINES_ID)
 
@@ -267,3 +327,33 @@ def test_load_morphology_with_spines():
     )
 
     assert isinstance(morph_with_spines, MorphologyWithSpines)
+
+
+def test_load_morphology_with_spines_load_meshes():
+    morph_with_spines = load_morphology_with_spines(
+        SAMPLE_MORPH_WITH_SPINES_DATASET_FILE, spines_are_centered=False, load_meshes=True
+    )
+
+    spine_meshes = morph_with_spines.spines.spine_meshes_for_morphology()
+
+    assert isinstance(morph_with_spines, MorphologyWithSpines)
+    assert len(spine_meshes) == 2
+    assert isinstance(spine_meshes[0], trimesh.Trimesh)
+    assert isinstance(
+        morph_with_spines.spines.compound_spine_meshes_for_morphology(), trimesh.Trimesh
+    )
+
+
+def test_load_morphology_with_spines_load_meshes_centered():
+    morph_with_spines = load_morphology_with_spines(
+        SAMPLE_MORPH_WITH_SPINES_CENTERED_DATASET_FILE, spines_are_centered=True, load_meshes=True
+    )
+
+    spine_meshes = morph_with_spines.spines.spine_meshes_for_morphology()
+
+    assert isinstance(morph_with_spines, MorphologyWithSpines)
+    assert len(spine_meshes) == 2
+    assert isinstance(spine_meshes[0], trimesh.Trimesh)
+    assert isinstance(
+        morph_with_spines.spines.compound_spine_meshes_for_morphology(), trimesh.Trimesh
+    )
