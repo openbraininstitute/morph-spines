@@ -45,66 +45,17 @@ dtypes = np.dtype(
 )
 
 
-def generate_random_spine_data(neuron_name: str, neuron_idx: int, num_spines: int) -> NDArray:
-    """Create a 2D array with random spine data.
-
-    Args:
-        neuron_name: Morphology ID for which the data will be generated
-        neuron_idx: index of the neuron
-        num_spines: number of spines
-
-    Returns: 2-dimensional array with random spine data
-    """
-    # Create an empty structured array to be filled with random data
-    data = np.empty(num_spines, dtype=dtypes)
-
-    # Fill the fields
-    data["afferent_surface_x"] = np.random.random(num_spines)
-    data["afferent_surface_y"] = np.random.random(num_spines)
-    data["afferent_surface_z"] = np.random.random(num_spines)
-
-    afferent_center = [
-        np.array([2.0, 5.0], dtype=np.float64),  # X
-        np.array([2.0, 5.0], dtype=np.float64),  # Y
-        np.array([3.0, 7.0], dtype=np.float64),  # Z
-    ]
-    afferent_center[0] += np.array([neuron_idx] * num_spines, dtype=np.float64)
-    data["afferent_center_x"] = afferent_center[0][:num_spines]
-    data["afferent_center_y"] = afferent_center[1][:num_spines]
-    data["afferent_center_z"] = afferent_center[2][:num_spines]
-
-    data["spine_id"] = np.array(range(num_spines), dtype=np.int64)
-    data["spine_morphology"] = np.array([neuron_name] * num_spines, dtype="S32")
-    data["spine_length"] = np.random.random(num_spines)
-
-    data["spine_orientation_vector_x"] = np.array([0.0] * num_spines, dtype=np.float64)
-    data["spine_orientation_vector_y"] = np.array([0.0] * num_spines, dtype=np.float64)
-    data["spine_orientation_vector_z"] = np.array([1.0] * num_spines, dtype=np.float64)
-
-    data["spine_rotation_x"] = np.array([0.0] * num_spines, dtype=np.float64)
-    data["spine_rotation_y"] = np.array([0.0] * num_spines, dtype=np.float64)
-    data["spine_rotation_z"] = np.array([0.0] * num_spines, dtype=np.float64)
-    data["spine_rotation_w"] = np.array([1.0] * num_spines, dtype=np.float64)
-
-    data["afferent_section_id"] = np.random.randint(num_spines)
-    data["afferent_segment_id"] = np.random.randint(num_spines)
-    data["afferent_segment_offset"] = np.random.random(num_spines)
-    data["afferent_section_pos"] = np.random.random(num_spines)
-
-    return data
-
-
 def generate_spine_data(neuron_name: str, neuron_idx: int, num_spines: int) -> NDArray:
-    """Create a 2D array with pre-defined values for spine data.
+    """Create a 2D array representing spine data.
 
     Args:
         neuron_name: Morphology ID for which the data will be generated
         neuron_idx: index of the neuron
         num_spines: number of spines
 
-    Returns: 2-dimensional array with pre-defined values for spine data
+    Returns: 2-dimensional array representing spine data
     """
-    # Create an empty structured array to be filled with pre-defined values
+    # Create an empty structured array to be filled with spine data
     data = np.empty(num_spines, dtype=dtypes)
 
     spines = np.arange(1, num_spines + 1, dtype=np.int64)
@@ -119,23 +70,13 @@ def generate_spine_data(neuron_name: str, neuron_idx: int, num_spines: int) -> N
     data["afferent_surface_y"] = afferent_surface[1][:num_spines]
     data["afferent_surface_z"] = afferent_surface[2][:num_spines]
 
-    # data["afferent_surface_x"] = np.array(0.1 * spines, dtype=np.float64)
-    # data["afferent_surface_y"] = np.array(0.1 * spines + spines / 100, dtype=np.float64)
-    # data["afferent_surface_z"] = np.array(0.1 * spines + spines / 1000, dtype=np.float64)
-
-    afferent_center = [
-        np.array([2.0, 5.0], dtype=np.float64),  # X
-        np.array([2.0, 5.0], dtype=np.float64),  # Y
-        np.array([3.0, 7.0], dtype=np.float64),  # Z
-    ]
-    afferent_center[0] += np.array([neuron_idx] * num_spines, dtype=np.float64)
-    data["afferent_center_x"] = afferent_center[0][:num_spines]
-    data["afferent_center_y"] = afferent_center[1][:num_spines]
-    data["afferent_center_z"] = afferent_center[2][:num_spines]
+    data["afferent_center_x"] = data["afferent_surface_x"]
+    data["afferent_center_y"] = data["afferent_surface_y"]
+    data["afferent_center_z"] = data["afferent_surface_z"]
 
     data["spine_id"] = np.arange(num_spines, dtype=np.int64)
     data["spine_morphology"] = np.array([neuron_name] * num_spines, dtype="S32")
-    data["spine_length"] = spines.astype(np.float64)
+    data["spine_length"] = np.array([2.0, 3.0], dtype=np.float64)[:num_spines]
 
     data["spine_orientation_vector_x"] = np.array([0.0] * num_spines, dtype=np.float64)
     data["spine_orientation_vector_y"] = np.array([0.0] * num_spines, dtype=np.float64)
@@ -415,25 +356,20 @@ def write_neuron_data(output_file: str, neuron_name: str, data: dict) -> None:
 
 
 def create_sample_data_centered(
-    output_file: str, num_neurons: int = 1, num_spines: int = 2, random_data: bool = False
-):
+    output_file: str, num_neurons: int = 1, num_spines: int = 2
+) -> None:
     """Generate the sample data and write it to the given output file.
 
     Args:
         output_file: Filepath to output file that will be created
         num_neurons: Number of neurons to be written in the file
         num_spines: Number of spines (per neuron) to be written in the file
-        random_data: Whether spine data must be generated randomly or not
 
     Returns: None
     """
     for i in range(num_neurons):
         neuron_name = f"neuron_{i}"
-        if random_data:
-            spine_table = generate_random_spine_data(neuron_name, i, num_spines)
-        else:
-            spine_table = generate_spine_data(neuron_name, i, num_spines)
-
+        spine_table = generate_spine_data(neuron_name, i, num_spines)
         neuron_skeleton = generate_neuron_skeleton(i)
         soma_mesh = generate_soma_mesh(i)
         spine_skeletons = generate_spine_skeletons(i, num_spines)
@@ -470,17 +406,13 @@ def main() -> None:
     # Number of spines (int)
     parser.add_argument("-nspines", type=int, default=2, help="Number of spines per neuron")
 
-    # Whether to generate random data (boolean)
-    parser.add_argument("--random_data", action="store_true", help="Generate random data")
-
     args = parser.parse_args()
 
     print("Output file:", args.output)
     print("Number of neurons:", args.nneurons)
     print("Number of spines per neuron:", args.nspines)
-    print("Random data enabled:", args.random_data)
 
-    create_sample_data_centered(args.output, args.nneurons, args.nspines, args.random_data)
+    create_sample_data_centered(args.output, args.nneurons, args.nspines)
 
 
 if __name__ == "__main__":
