@@ -309,8 +309,8 @@ def test_load_spine_meshes_for_morphology_centered():
     ]
 
     for spine in range(len(meshes)):
-        #print(f"vertices: {meshes[spine].vertices}")
-        #print(f"vs: {vertices_ref[spine]}")
+        # print(f"vertices: {meshes[spine].vertices}")
+        # print(f"vs: {vertices_ref[spine]}")
         assert_array_equal(meshes[spine].faces, triangles_ref[spine])
         assert_array_equal(meshes[spine].vertices, vertices_ref[spine])
 

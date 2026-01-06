@@ -1,4 +1,4 @@
-"""Represents the spines of a neron morphology with spines.
+"""Represents the spines of a neuron morphology with spines.
 
 Provides utility and data access to a representation of a
 neuron morphology with individual spines.
@@ -7,6 +7,7 @@ neuron morphology with individual spines.
 from collections.abc import Iterator
 
 import h5py
+import numpy
 import pandas
 import trimesh
 from neurom.core.morphology import Morphology, Neurite
@@ -120,14 +121,27 @@ class Spines:
         _spine_mesh_grp = _spine_row[COL_SPINE_MESH]
         _spine_id = int(_spine_row[COL_SPINE_ID])
 
-        with h5py.File(self._filepath, "r") as h5_file:
-            group = h5_file[GRP_SPINES][GRP_MESHES][_spine_mesh_grp]
-            vertex_start = group[GRP_OFFSETS][_spine_id, 0]
-            vertex_end = group[GRP_OFFSETS][_spine_id + 1, 0]
-            spine_points = group[GRP_VERTICES][vertex_start:vertex_end].astype(float)
+        if len(self._spine_meshes) != 0:
+            spine_points = numpy.array(self._spine_meshes[_spine_id].vertices)
 
-        if transform:
-            spine_points = geometry.transform_for_spine(self.spine_table, spine_loc, spine_points)
+            if not transform:
+                # Spine mesh points are already in global coordinates, so we need to convert them
+                # back to the local spine coordinate system
+                spine_points = geometry.inverse_transform_for_spine(
+                    self.spine_table, spine_loc, spine_points
+                )
+
+        else:
+            with h5py.File(self._filepath, "r") as h5_file:
+                group = h5_file[GRP_SPINES][GRP_MESHES][_spine_mesh_grp]
+                vertex_start = group[GRP_OFFSETS][_spine_id, 0]
+                vertex_end = group[GRP_OFFSETS][_spine_id + 1, 0]
+                spine_points = group[GRP_VERTICES][vertex_start:vertex_end].astype(float)
+
+            if transform:
+                spine_points = geometry.transform_for_spine(
+                    self.spine_table, spine_loc, spine_points
+                )
 
         return spine_points
 
@@ -140,11 +154,17 @@ class Spines:
         _spine_row = self.spine_table.loc[spine_loc]
         _spine_mesh_grp = _spine_row[COL_SPINE_MESH]
         _spine_id = int(_spine_row[COL_SPINE_ID])
-        with h5py.File(self._filepath, "r") as h5_file:
-            group = h5_file[GRP_SPINES][GRP_MESHES][_spine_mesh_grp]
-            triangle_start = group[GRP_OFFSETS][_spine_id, 1]
-            triangle_end = group[GRP_OFFSETS][_spine_id + 1, 1]
-            triangles = group[GRP_TRIANGLES][triangle_start:triangle_end].astype(int)
+
+        if len(self._spine_meshes) != 0:
+            triangles = self._spine_meshes[_spine_id].triangles
+
+        else:
+            with h5py.File(self._filepath, "r") as h5_file:
+                group = h5_file[GRP_SPINES][GRP_MESHES][_spine_mesh_grp]
+                triangle_start = group[GRP_OFFSETS][_spine_id, 1]
+                triangle_end = group[GRP_OFFSETS][_spine_id + 1, 1]
+                triangles = group[GRP_TRIANGLES][triangle_start:triangle_end].astype(int)
+
         return triangles
 
     def spine_mesh_points(self, spine_loc: int) -> NDArray:

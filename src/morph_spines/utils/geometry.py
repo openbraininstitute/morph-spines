@@ -20,9 +20,9 @@ def spine_transformations(spine_table: pd.DataFrame, spine_loc: int) -> tuple[Ro
     """
     spine_row = spine_table.loc[spine_loc]
     spine_rotation = Rotation.from_quat(spine_row[COL_ROTATION].to_numpy(dtype=float))
-    spine_transformation = spine_row[COL_TRANSLATION].to_numpy(dtype=float)
+    spine_translation = spine_row[COL_TRANSLATION].to_numpy(dtype=float)
 
-    return spine_rotation, spine_transformation
+    return spine_rotation, spine_translation
 
 
 def transform_for_spine(
@@ -33,5 +33,18 @@ def transform_for_spine(
     Apply the transformation from the local spine coordinate system
     to the global neuron coordinate system to a set of points.
     """
-    spine_rotation, spine_transformation = spine_transformations(spine_table, spine_loc)
-    return spine_rotation.apply(spine_points) + spine_transformation.reshape((1, -1))
+    spine_rotation, spine_translation = spine_transformations(spine_table, spine_loc)
+    return spine_rotation.apply(spine_points) + spine_translation.reshape((1, -1))
+
+
+def inverse_transform_for_spine(
+    spine_table: pd.DataFrame, spine_loc: int, spine_points: NDArray
+) -> NDArray:
+    """Apply spine coordinate system transformations.
+
+    Apply the transformation from the global neuron coordinate system
+    to the local spine coordinate system to a set of points.
+    """
+    spine_rotation, spine_translation = spine_transformations(spine_table, spine_loc)
+
+    return spine_rotation.inv().apply(spine_points - spine_translation.reshape((1, -1)))
