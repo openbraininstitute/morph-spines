@@ -189,9 +189,13 @@ class Spines:
         Returns the mesh (as a trimesh.Trimesh) of an individual spine.
         In global neuron coordinates.
         """
-        spine_mesh = trimesh.Trimesh(
-            vertices=self.spine_mesh_points(spine_loc), faces=self.spine_mesh_triangles(spine_loc)
-        )
+        if len(self._spine_meshes) != 0:
+            spine_mesh = self._spine_meshes[spine_loc]
+        else:
+            spine_mesh = trimesh.Trimesh(
+                vertices=self.spine_mesh_points(spine_loc),
+                faces=self.spine_mesh_triangles(spine_loc)
+            )
         return spine_mesh
 
     def centered_spine_mesh(self, spine_loc: int) -> trimesh.Trimesh:
@@ -255,14 +259,14 @@ class Spines:
         """
         return trimesh.util.concatenate(self.centered_spine_meshes_for_section(section_id))
 
-    def spine_meshes_for_morphology(self) -> list[trimesh.Trimesh]:
+    def spine_meshes_for_morphology(self) -> Iterator[trimesh.Trimesh]:
         """Return all the spine meshes of the morphology.
 
         An array of spine meshes is returned. The meshes are already rotated and translated with
         respect to the global morphology coordinates. There is an implicit index for each spine
         mesh that matches the spine index order from the spine table.
         """
-        return self._spine_meshes
+        yield from self._spine_meshes
 
     def compound_spine_meshes_for_morphology(self) -> trimesh.Trimesh:
         """Return all the spine meshes of the morphology unified into a single mesh.
@@ -271,3 +275,27 @@ class Spines:
         coordinates.
         """
         return trimesh.util.concatenate(self.spine_meshes_for_morphology())
+    
+    def centered_spine_meshes_for_morphology(self) -> Iterator[trimesh.Trimesh]:
+        """Return all the spine meshes of the morphology.
+
+        An array of spine meshes is returned. The meshes are in local spine coordinates.
+        There is an implicit index for each spine mesh that matches the spine index order
+        from the spine table.
+        """
+        for spine_idx, spine_mesh in enumerate(self._spine_meshes):
+            centered_spine_mesh = trimesh.Trimesh(
+                vertices=geometry.inverse_transform_for_spine(
+                    self.spine_table, spine_idx, spine_mesh.vertices
+                ),
+                faces=spine_mesh.triangles,
+            )
+            yield centered_spine_mesh
+
+    def compound_centered_spine_meshes_for_morphology(self) -> trimesh.Trimesh:
+        """Return all the spine meshes of the morphology unified into a single mesh.
+
+        The mesh is already rotated and translated with respect to the global morphology
+        coordinates.
+        """
+        return trimesh.util.concatenate(self.centered_spine_meshes_for_morphology())
