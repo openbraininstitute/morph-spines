@@ -334,7 +334,7 @@ def test_load_morphology_with_spines_load_meshes():
         SAMPLE_MORPH_WITH_SPINES_DATASET_FILE, spines_are_centered=False, load_meshes=True
     )
 
-    spine_meshes = morph_with_spines.spines.spine_meshes_for_morphology()
+    spine_meshes = list(morph_with_spines.spines.spine_meshes_for_morphology())
 
     assert isinstance(morph_with_spines, MorphologyWithSpines)
     assert len(spine_meshes) == 2
@@ -349,7 +349,7 @@ def test_load_morphology_with_spines_load_meshes_centered():
         SAMPLE_MORPH_WITH_SPINES_CENTERED_DATASET_FILE, spines_are_centered=True, load_meshes=True
     )
 
-    spine_meshes = morph_with_spines.spines.spine_meshes_for_morphology()
+    spine_meshes = list(morph_with_spines.spines.spine_meshes_for_morphology())
 
     assert isinstance(morph_with_spines, MorphologyWithSpines)
     assert len(spine_meshes) == 2
