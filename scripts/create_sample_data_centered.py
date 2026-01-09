@@ -267,6 +267,21 @@ def generate_spine_meshes(neuron_idx: int, num_spines: int) -> dict[str, np.ndar
 
     return spine_meshes
 
+def write_spine_meshes(output_file: str, spine_grp_name: str, spine_meshes: dict):
+    mode = "a" if os.path.exists(output_file) else "w"
+
+    with h5py.File(output_file, mode) as h5_file:
+        spines_grp = h5_file.require_group("spines")
+
+        # Group /spines/meshes
+        spines_meshes_grp = spines_grp.require_group("meshes")
+        spines_id = spines_meshes_grp.create_group(spine_grp_name)
+
+        spines_id.create_dataset("offsets", data=spine_meshes["offsets"])
+        spines_id.create_dataset("triangles", data=spine_meshes["triangles"])
+        spines_id.create_dataset("vertices", data=spine_meshes["vertices"])
+
+    print(f'Successfully created spine mesh library "{spine_grp_name}".')
 
 def write_neuron_data(output_file: str, neuron_name: str, data: dict) -> None:
     """Write the collection of neuron and spine data to file.
@@ -333,12 +348,13 @@ def write_neuron_data(output_file: str, neuron_name: str, data: dict) -> None:
         spines_grp = h5_file.require_group("spines")
 
         # Group /spines/meshes
-        spines_meshes_grp = spines_grp.require_group("meshes")
-        spines_id = spines_meshes_grp.create_group(neuron_name)
+        if spine_meshes is not None:
+            spines_meshes_grp = spines_grp.require_group("meshes")
+            spines_id = spines_meshes_grp.create_group(neuron_name)
 
-        spines_id.create_dataset("offsets", data=spine_meshes["offsets"])
-        spines_id.create_dataset("triangles", data=spine_meshes["triangles"])
-        spines_id.create_dataset("vertices", data=spine_meshes["vertices"])
+            spines_id.create_dataset("offsets", data=spine_meshes["offsets"])
+            spines_id.create_dataset("triangles", data=spine_meshes["triangles"])
+            spines_id.create_dataset("vertices", data=spine_meshes["vertices"])
 
         # Group /spines/skeletons
         spines_skel = spines_grp.require_group("skeletons")
@@ -356,7 +372,7 @@ def write_neuron_data(output_file: str, neuron_name: str, data: dict) -> None:
 
 
 def create_sample_data_centered(
-    output_file: str, num_neurons: int = 1, num_spines: int = 2
+    output_file: str, num_neurons: int = 1, num_spines: int = 2, reuse_spine: bool = False,
 ) -> None:
     """Generate the sample data and write it to the given output file.
 
@@ -364,16 +380,27 @@ def create_sample_data_centered(
         output_file: Filepath to output file that will be created
         num_neurons: Number of neurons to be written in the file
         num_spines: Number of spines (per neuron) to be written in the file
+        reuse_spine: If True, only a single spine mesh is created, but re-used for all spines of all neurons
 
     Returns: None
     """
+    if reuse_spine:
+        spine_grp_name = "spine_library_1"
+        spine_meshes = generate_spine_meshes(0, 1)
+        write_spine_meshes(output_file, spine_grp_name, spine_meshes)
+
     for i in range(num_neurons):
         neuron_name = f"neuron_{i}"
         spine_table = generate_spine_data(neuron_name, i, num_spines)
         neuron_skeleton = generate_neuron_skeleton(i)
         soma_mesh = generate_soma_mesh(i)
         spine_skeletons = generate_spine_skeletons(i, num_spines)
-        spine_meshes = generate_spine_meshes(i, num_spines)
+        if reuse_spine:
+            spine_table["spine_morphology"] = spine_grp_name
+            spine_table["spine_id"] = 0
+            spine_meshes = None
+        else:
+            spine_meshes = generate_spine_meshes(i, num_spines)
 
         data = {
             (neuron_name, "spine_table"): spine_table,
@@ -406,13 +433,17 @@ def main() -> None:
     # Number of spines (int)
     parser.add_argument("-nspines", type=int, default=2, help="Number of spines per neuron")
 
+    # Whether to build a spine library and reuse it
+    parser.add_argument("--reuse", action="store_true", help="Re-use spines from a library")
+
     args = parser.parse_args()
 
     print("Output file:", args.output)
     print("Number of neurons:", args.nneurons)
     print("Number of spines per neuron:", args.nspines)
+    print("Re-use spines from a library:", args.reuse)
 
-    create_sample_data_centered(args.output, args.nneurons, args.nspines)
+    create_sample_data_centered(args.output, args.nneurons, args.nspines, args.reuse)
 
 
 if __name__ == "__main__":
