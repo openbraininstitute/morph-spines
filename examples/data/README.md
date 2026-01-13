@@ -100,7 +100,7 @@ the dataset corresponds to the name of the column.
 
 All datasets must be stored under the same H5 group (usually, the neuron ID) and must have exactly
 the same length. Datasets cannot be multidimensional datasets: only 1-dimensional arrays and
-scalars are accepted.
+scalars are accepted (in which case are interpreted as an array of a single element).
 
 The H5 group can only contain the datasets representing spines table columns. No other subgroups or
 datasets with different length are allowed.
