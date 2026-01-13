@@ -9,7 +9,8 @@ some datasets are compressed, when indicated in their description.
 Each file can contain the information of one or multiple neurons, together with multiple spines.
 
 The spines data (skeletons and meshes) can be stored as a library, which can then be reused by
-multiple neurons, so the same spine can be instantiated multiple times and by multiple neurons.
+multiple neurons, so the same spine morphology can be instantiated multiple times and by multiple
+neurons.
 
 
 ## `/edges` group
