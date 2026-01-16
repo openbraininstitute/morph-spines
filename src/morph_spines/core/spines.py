@@ -4,7 +4,7 @@ Provides utility and data access to a representation of a
 neuron morphology with individual spines.
 """
 
-from collections.abc import Iterator
+from typing import Iterator
 
 import h5py
 import pandas
@@ -17,7 +17,7 @@ from morph_spines.core.h5_schema import (
     COL_AFF_SEC,
     COL_ROTATION,
     COL_SPINE_ID,
-    COL_SPINE_MESH,
+    COL_SPINE_MORPH,
     COL_TRANSLATION,
     GRP_MESHES,
     GRP_OFFSETS,
@@ -121,7 +121,7 @@ class Spines:
         individual spines.
         """
         _spine_row = self.spine_table.loc[spine_loc]
-        _spine_mesh_grp = _spine_row[COL_SPINE_MESH]
+        _spine_mesh_grp = _spine_row[COL_SPINE_MORPH]
         _spine_id = int(_spine_row[COL_SPINE_ID])
 
         with h5py.File(self._filepath, "r") as h5_file:
@@ -141,7 +141,7 @@ class Spines:
         individual spines.
         """
         _spine_row = self.spine_table.loc[spine_loc]
-        _spine_mesh_grp = _spine_row[COL_SPINE_MESH]
+        _spine_mesh_grp = _spine_row[COL_SPINE_MORPH]
         _spine_id = int(_spine_row[COL_SPINE_ID])
         with h5py.File(self._filepath, "r") as h5_file:
             group = h5_file[GRP_SPINES][GRP_MESHES][_spine_mesh_grp]  # [_spine_id_grp]
