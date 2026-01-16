@@ -10,6 +10,7 @@ import numpy as np
 import pandas as pd
 from neurom.core.morphology import Morphology
 from neurom.io.utils import load_morphology as neurom_load_morphology
+from morphio.mut import Morphology as MutableMorphology
 
 from morph_spines.core.h5_schema import (
     ATT_VERSION,
@@ -18,6 +19,8 @@ from morph_spines.core.h5_schema import (
     GRP_MORPH,
     GRP_SKELETONS,
     GRP_SPINES,
+    COL_SPINE_ID,
+    COL_SPINE_MORPH,
 )
 from morph_spines.core.morphology_with_spines import MorphologyWithSpines
 from morph_spines.core.soma import Soma
@@ -25,6 +28,19 @@ from morph_spines.core.spines import Spines
 
 
 def _resolve_morphology_name(morphology_filepath: str, morphology_name: str | None = None) -> str:
+    """
+    Determine the morphology name from the given arguments.
+
+    If morphology_name is None and a single morphology is found in the file, its name is returned;
+    if a morphology name is given, it checks if it exists in the file, and if so, it is returned;
+    a ValueError is raised otherwise.
+
+    Args:
+        morphology_filepath: HDF5 file path
+        morphology_name: morphology name to load or None
+
+    Returns: the morphology name to load data from
+    """
     with h5py.File(morphology_filepath, "r") as h5:
         if GRP_MORPH in list(h5.keys()):
             lst_morph_names = list(h5[GRP_MORPH].keys())
@@ -52,7 +68,7 @@ def load_morphology_with_spines(
 ) -> MorphologyWithSpines:
     """Load a neuron morphology with spines.
 
-    Loads a neuron morphology with spines from a hdf5 archive.
+    Loads a neuron morphology with spines from an hdf5 archive.
     Returns the representation of a spiny morphology of this package.
     """
     morphology = load_morphology(morphology_filepath, morphology_name, process_subtrees)
@@ -218,6 +234,48 @@ def load_spine_table(filepath: str, name: str) -> pd.DataFrame:
     return spine_table
 
 
+def load_spine_skeletons(filepath: str, name: str, spine_table: pd.DataFrame) -> Morphology:
+    """
+    Given a spine table, load all the spine skeletons present in the table.
+
+    Args:
+        filepath: H5 file containing the spine skeletons
+        name: Neuron ID to which the spines belong to
+        spine_table: Spine table in the form of a Pandas DataFrame
+
+    Returns: a single NeuroM Morphology object containing all the spine skeletons
+    """
+    # Check whether all spines must be loaded from the same H5 dataset (I/O optimization)
+    skeletons_table = spine_table[[COL_SPINE_ID, COL_SPINE_MORPH]]
+    skeletons_datasets = set(skeletons_table[COL_SPINE_MORPH])
+    skeletons_collections = {}
+    coll = morphio.Collection(filepath)
+    for collection in skeletons_datasets:
+        skeletons_collections[collection] = neurom_load_morphology(
+            coll.load(f"{GRP_SPINES}/{GRP_SKELETONS}/{collection}")
+        )
+
+    # Optimization: spines are organized by morphology name
+    if len(skeletons_datasets) == 1:
+        morph_name = list(skeletons_datasets)[0]
+        # Load skeletons from only one collection
+        skeletons_indices = skeletons_table[COL_SPINE_ID]
+        if len(set(skeletons_indices)) == len(skeletons_indices):
+            if len(skeletons_collections[morph_name].neurites) == len(skeletons_indices):
+                return skeletons_collections[morph_name]
+
+    spine_skeletons = MutableMorphology()
+
+    for row in skeletons_table.itertuples(index=False):
+        spine_morph = getattr(row, COL_SPINE_MORPH)
+        spine_id = getattr(row, COL_SPINE_ID)
+        spine = skeletons_collections[spine_morph].to_morphio().root_sections[spine_id]
+
+        spine_skeletons.append_root_section(spine, recursive=True)
+
+    return neurom_load_morphology(spine_skeletons.as_immutable())
+
+
 def load_spines(filepath: str, name: str | None = None, spines_are_centered: bool = True) -> Spines:
     """Load the spines from a neuron morphology with spines representation.
 
@@ -229,10 +287,8 @@ def load_spines(filepath: str, name: str | None = None, spines_are_centered: boo
     spine_table_path = f"{GRP_EDGES}/{name}"
     spine_table = load_spine_table(filepath, spine_table_path)
 
-    coll = morphio.Collection(filepath)
-    centered_spine_skeletons = neurom_load_morphology(
-        coll.load(f"{GRP_SPINES}/{GRP_SKELETONS}/{name}")
-    )
+    centered_spine_skeletons = load_spine_skeletons(filepath, name, spine_table)
+
     return Spines(
         filepath,
         name,
