@@ -4,7 +4,7 @@ Provides utility and data access to a representation of a
 neuron morphology with individual spines.
 """
 
-from typing import Iterator
+from collections.abc import Iterator
 
 import h5py
 import pandas

@@ -8,19 +8,19 @@ import h5py
 import morphio
 import numpy as np
 import pandas as pd
+from morphio.mut import Morphology as MutableMorphology
 from neurom.core.morphology import Morphology
 from neurom.io.utils import load_morphology as neurom_load_morphology
-from morphio.mut import Morphology as MutableMorphology
 
 from morph_spines.core.h5_schema import (
     ATT_VERSION,
+    COL_SPINE_ID,
+    COL_SPINE_MORPH,
     GRP_EDGES,
     GRP_METADATA,
     GRP_MORPH,
     GRP_SKELETONS,
     GRP_SPINES,
-    COL_SPINE_ID,
-    COL_SPINE_MORPH,
 )
 from morph_spines.core.morphology_with_spines import MorphologyWithSpines
 from morph_spines.core.soma import Soma
@@ -28,8 +28,7 @@ from morph_spines.core.spines import Spines
 
 
 def _resolve_morphology_name(morphology_filepath: str, morphology_name: str | None = None) -> str:
-    """
-    Determine the morphology name from the given arguments.
+    """Determine the morphology name from the given arguments.
 
     If morphology_name is None and a single morphology is found in the file, its name is returned;
     if a morphology name is given, it checks if it exists in the file, and if so, it is returned;
@@ -235,8 +234,7 @@ def load_spine_table(filepath: str, name: str) -> pd.DataFrame:
 
 
 def load_spine_skeletons(filepath: str, name: str, spine_table: pd.DataFrame) -> Morphology:
-    """
-    Given a spine table, load all the spine skeletons present in the table.
+    """Given a spine table, load all the spine skeletons present in the table.
 
     Args:
         filepath: H5 file containing the spine skeletons
