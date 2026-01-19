@@ -253,10 +253,9 @@ def load_spine_skeletons(filepath: str, name: str, spine_table: pd.DataFrame) ->
             coll.load(f"{GRP_SPINES}/{GRP_SKELETONS}/{collection}")
         )
 
-    # Optimization: spines are organized by morphology name
+    # Optimization: if spines are organized by morphology name, and we want to load its spines only
     if len(skeletons_datasets) == 1:
         morph_name = list(skeletons_datasets)[0]
-        # Load skeletons from only one collection
         skeletons_indices = skeletons_table[COL_SPINE_ID]
         if len(set(skeletons_indices)) == len(skeletons_indices):
             if len(skeletons_collections[morph_name].neurites) == len(skeletons_indices):
