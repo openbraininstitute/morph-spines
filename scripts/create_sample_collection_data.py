@@ -295,7 +295,9 @@ def generate_spines_meshes(coll_idx: int, num_spines: int) -> dict[str, np.ndarr
 
     spines_meshes = {
         "offsets": np.vstack(offsets),
-        "triangles": np.array(meshes_library[(shape[0], "triangles")] * num_spines, dtype=np.int32),
+        "triangles": np.tile(
+            np.array(meshes_library[(shape[0], "triangles")], dtype=np.int32), (num_spines, 1)
+        ),
         "vertices": np.vstack(vertices),
     }
 
