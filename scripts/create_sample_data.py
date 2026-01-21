@@ -214,7 +214,7 @@ def generate_spine_skeletons(neuron_idx: int, num_spines: int) -> dict[str, np.n
         ]
     )
 
-    structure = np.array([[2, 2, -1], [5, 2, -1]])
+    structure = np.array([[0, 2, -1], [2, 2, -1]])
 
     points = points[0:2] if num_spines == 1 else points
     structure = structure[0:1] if num_spines == 1 else structure
