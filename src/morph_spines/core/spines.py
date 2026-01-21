@@ -18,7 +18,6 @@ from morph_spines.core.h5_schema import (
     COL_AFF_SEC,
     COL_SPINE_ID,
     COL_SPINE_MORPH,
-    COL_TRANSLATION,
     GRP_MESHES,
     GRP_OFFSETS,
     GRP_SPINES,
