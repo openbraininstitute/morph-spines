@@ -326,7 +326,7 @@ def test_load_spine_meshes_for_morphology():
 def test_load_spine_meshes_for_morphology_centered():
     spine_table = load_spine_table(
         SAMPLE_MORPH_WITH_SPINES_CENTERED_DATASET_FILE,
-        f"{GRP_EDGES}/{MORPH_WITH_SPINES_CENTERED_ID}"
+        f"{GRP_EDGES}/{MORPH_WITH_SPINES_CENTERED_ID}",
     )
 
     meshes = load_spine_meshes_for_morphology(
