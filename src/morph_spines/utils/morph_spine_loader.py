@@ -292,29 +292,56 @@ def load_spine_meshes_for_morphology(
     respect to the global morphology coordinates. There is an implicit index for each spine
     mesh that matches the spine index order from the spine table.
     """
-    # Read all the datasets at once and store them in memory
-    with h5py.File(filepath, "r") as h5_file:
-        morphology_meshes = h5_file[GRP_SPINES][GRP_MESHES][morphology_name]
-        all_spine_triangles = np.array(morphology_meshes[GRP_TRIANGLES].astype(int))
-        all_spine_vertices = np.array(morphology_meshes[GRP_VERTICES].astype(float))
-        all_spine_offsets = np.array(morphology_meshes[GRP_OFFSETS].astype(int))
+    # Get the list of the spines belonging to the morphology
+    spines_df = spine_table.loc[spine_table[COL_SPINE_MORPH] == morphology_name]
+    # Get the list of paths where meshes are stored, since we want all the meshes of the
+    # morphology, we can optimize the data access by just accessing once per mesh group path.
+    # However, for correctness, we still want to preserve the order in the spine table
+    spine_id_mesh_groups = spines_df.loc[:, [COL_SPINE_ID, COL_SPINE_MORPH]]
+    spine_mesh_groups = spine_id_mesh_groups[COL_SPINE_MORPH].drop_duplicates()
 
-    # Split meshes according to their spine index
-    all_spine_meshes = list()
-    # We can infer the number of spines directly from the offsets array, minus one
-    for spine_idx in range(all_spine_offsets.shape[0] - 1):
-        vertex_start = all_spine_offsets[spine_idx, 0]
-        vertex_end = all_spine_offsets[spine_idx + 1, 0]
-        spine_vertices = all_spine_vertices[vertex_start:vertex_end]
-        if spines_are_centered:
-            spine_vertices = geometry.transform_for_spine(spine_table, spine_idx, spine_vertices)
-        triangle_start = all_spine_offsets[spine_idx, 1]
-        triangle_end = all_spine_offsets[spine_idx + 1, 1]
-        spine_triangles = all_spine_triangles[triangle_start:triangle_end]
-        spine_mesh = trimesh.Trimesh(vertices=spine_vertices, faces=spine_triangles)
-        all_spine_meshes.append(spine_mesh)
+    # To preserve spine order, we will add the meshes one by one in the dataframe, then return only
+    # the mesh column
+    spines_df["spine_mesh"] = None
+    for spine_mesh_group in spine_mesh_groups:
+        # Read all the datasets under the same group at once and store them in memory
+        # We may be reading more data than needed, but it will still be better for I/O efficiency
+        with h5py.File(filepath, "r") as h5_file:
+            morphology_meshes = h5_file[GRP_SPINES][GRP_MESHES][spine_mesh_group]
+            all_spine_triangles = np.array(morphology_meshes[GRP_TRIANGLES].astype(int))
+            all_spine_vertices = np.array(morphology_meshes[GRP_VERTICES].astype(float))
+            all_spine_offsets = np.array(morphology_meshes[GRP_OFFSETS].astype(int))
 
-    return all_spine_meshes
+        # Split meshes according to their spine index (ID), take only the ones present in the spine
+        # table and populate the 'spine_mesh' column accordingly
+        # To avoid exploding memory consumption, process all the spines inside the current group
+        # and once finished, move to the next group
+        spine_ids = spine_id_mesh_groups.loc[
+            spine_id_mesh_groups[COL_SPINE_MORPH] == spine_mesh_group,
+            [COL_SPINE_ID],
+        ]
+
+        # We need to make a distinction between:
+        # table_idx: index of the spine in the spine table (row number)
+        # spine_id: column in the spine table that defines the offsets at which we can find the
+        # spine data
+        # In order to preserve the spine order in the spine table, we need both
+        print(f"{spine_ids}")
+        for table_idx, spine_id in spine_ids.itertuples():
+            vertex_start = all_spine_offsets[spine_id, 0]
+            vertex_end = all_spine_offsets[spine_id + 1, 0]
+            spine_vertices = all_spine_vertices[vertex_start:vertex_end]
+            if spines_are_centered:
+                spine_vertices = geometry.transform_for_spine(
+                    spine_table, table_idx, spine_vertices
+                )
+            triangle_start = all_spine_offsets[spine_id, 1]
+            triangle_end = all_spine_offsets[spine_id + 1, 1]
+            spine_triangles = all_spine_triangles[triangle_start:triangle_end]
+            spine_mesh = trimesh.Trimesh(vertices=spine_vertices, faces=spine_triangles)
+            spines_df.loc[table_idx, "spine_mesh"] = spine_mesh  # type: ignore[call-overload]
+
+    return spines_df["spine_mesh"].tolist()
 
 
 def load_spines(
@@ -334,7 +361,7 @@ def load_spines(
     spine_table = load_spine_table(filepath, spine_table_path)
 
     centered_spine_skeletons = load_spine_skeletons(filepath, name, spine_table)
-    
+
     spine_meshes = (
         load_spine_meshes_for_morphology(filepath, name, spines_are_centered, spine_table)
         if load_meshes
