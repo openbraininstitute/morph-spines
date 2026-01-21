@@ -194,7 +194,7 @@ class Spines:
         else:
             spine_mesh = trimesh.Trimesh(
                 vertices=self.spine_mesh_points(spine_loc),
-                faces=self.spine_mesh_triangles(spine_loc)
+                faces=self.spine_mesh_triangles(spine_loc),
             )
         return spine_mesh
 
@@ -275,7 +275,7 @@ class Spines:
         coordinates.
         """
         return trimesh.util.concatenate(self.spine_meshes_for_morphology())
-    
+
     def centered_spine_meshes_for_morphology(self) -> Iterator[trimesh.Trimesh]:
         """Return all the spine meshes of the morphology.
 
