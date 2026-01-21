@@ -326,7 +326,6 @@ def load_spine_meshes_for_morphology(
         # spine_id: column in the spine table that defines the offsets at which we can find the
         # spine data
         # In order to preserve the spine order in the spine table, we need both
-        print(f"{spine_ids}")
         for table_idx, spine_id in spine_ids.itertuples():
             vertex_start = all_spine_offsets[spine_id, 0]
             vertex_end = all_spine_offsets[spine_id + 1, 0]

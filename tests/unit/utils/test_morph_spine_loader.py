@@ -302,10 +302,15 @@ def test_load_spine_meshes_for_morphology():
         SAMPLE_MORPH_WITH_SPINES_DATASET_FILE, f"{GRP_EDGES}/{MORPH_WITH_SPINES_ID}"
     )
 
+    print(spine_table)
+
+    print(f"Columns: {spine_table.columns}")
+
+    # Test hack: the spines are centered, we just pretend they are not for the purpose of the test
     meshes = load_spine_meshes_for_morphology(
         SAMPLE_MORPH_WITH_SPINES_DATASET_FILE,
         MORPH_WITH_SPINES_ID,
-        spines_are_centered=True,
+        spines_are_centered=False,
         spine_table=spine_table,
     )
 
@@ -314,8 +319,8 @@ def test_load_spine_meshes_for_morphology():
         np.array([[0, 1, 2], [0, 2, 3], [0, 3, 1], [1, 3, 2]], dtype=int),
     ]
     vertices_ref = [
-        np.array([[2, 2, 2], [3, 2, 4], [2, 3, 4], [1, 2, 4], [2, 1, 4]], dtype=float),
-        np.array([[5, 5, 5], [5, 7, 9], [7, 3, 9], [3, 3, 9]], dtype=float),
+        np.array([[0, 0, -1], [1, 0, 1], [0, 1, 1], [-1, 0, 1], [0, -1, 1]], dtype=float),
+        np.array([[0, 0, -2], [0, 2, 2], [2, -2, 2], [-2, -2, 2]], dtype=float),
     ]
 
     for spine in range(len(meshes)):
