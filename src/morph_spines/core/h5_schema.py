@@ -16,7 +16,7 @@ GRP_TRIANGLES = "triangles"
 GRP_VERTICES = "vertices"
 
 # Columns of edge table dataframes
-COL_SPINE_MESH = "spine_morphology"
+COL_SPINE_MORPH = "spine_morphology"
 COL_SPINE_ID = "spine_id"
 COL_ROTATION = ["spine_rotation_x", "spine_rotation_y", "spine_rotation_z", "spine_rotation_w"]
 COL_TRANSLATION = ["afferent_surface_x", "afferent_surface_y", "afferent_surface_z"]

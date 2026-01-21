@@ -17,15 +17,24 @@ from morph_spines.utils.morph_spine_loader import (
     load_morphology_with_spines,
     load_soma,
     load_spine_meshes_for_morphology,
+    load_spine_skeletons,
     load_spine_table,
 )
 
 SAMPLE_DATA_DIR = f"{Path(__file__).parent.parent}/data"
 SAMPLE_MORPH_WITH_SPINES_DATASET_FILE = f"{SAMPLE_DATA_DIR}/morph_with_spines_schema_v1.0.h5"
+MORPH_WITH_SPINES_ID = "neuron_0"
+
 SAMPLE_MORPH_WITH_SPINES_CENTERED_DATASET_FILE = (
     f"{SAMPLE_DATA_DIR}/morph_with_spines_centered_schema_v1.0.h5"
 )
-MORPH_WITH_SPINES_ID = "01234"
+MORPH_WITH_SPINES_CENTERED_ID = "01234"
+
+SAMPLE_MORPH_WITH_SPINES_COLLECTION_FILE = (
+    f"{SAMPLE_DATA_DIR}/morph_with_spines_col_v1.0_2nrn_3col.h5"
+)
+COL_MORPH_IDS = ["neuron_0", "neuron_1"]
+COL_COLLECTION_IDS = ["coll_0", "coll_1", "coll_2"]
 
 
 def test__resolve_morphology_name_single():
@@ -192,8 +201,8 @@ def test_load_spine_table_success():
             "afferent_section_id",
         ]
     ).issubset(set(df.columns))
-    assert df.loc[0, "afferent_surface_x"] == np.float64(0.1)
-    assert df.loc[1, "spine_length"] == 2
+    assert df.loc[0, "afferent_surface_x"] == np.float64(2.0)
+    assert df.loc[1, "spine_length"] == np.float64(3.0)
 
 
 def test_load_spine_table_pandas_df(tmp_path):
@@ -261,6 +270,33 @@ def test_load_spine_table_invalid_with_version10(tmp_path):
         load_spine_table(str(f), f"{GRP_EDGES}")
 
 
+def test_load_spine_skeletons_edgecase_spine_dup():
+    df = load_spine_table(
+        SAMPLE_MORPH_WITH_SPINES_DATASET_FILE, f"{GRP_EDGES}/{MORPH_WITH_SPINES_ID}"
+    )
+    df.drop(index=0, inplace=True)
+    df = pd.concat([df, df], axis=0, ignore_index=True)
+    spines_skeletons = load_spine_skeletons(
+        SAMPLE_MORPH_WITH_SPINES_DATASET_FILE, MORPH_WITH_SPINES_ID, df
+    )
+    num_spines = df.shape[0]
+
+    assert num_spines == len(spines_skeletons.neurites)
+
+
+def test_load_spine_skeletons_edgecase_spine_missing():
+    df = load_spine_table(
+        SAMPLE_MORPH_WITH_SPINES_DATASET_FILE, f"{GRP_EDGES}/{MORPH_WITH_SPINES_ID}"
+    )
+    df.drop(index=0, inplace=True)
+    spines_skeletons = load_spine_skeletons(
+        SAMPLE_MORPH_WITH_SPINES_DATASET_FILE, MORPH_WITH_SPINES_ID, df
+    )
+    num_spines = df.shape[0]
+
+    assert num_spines == len(spines_skeletons.neurites)
+
+
 def test_load_spine_meshes_for_morphology():
     spine_table = load_spine_table(
         SAMPLE_MORPH_WITH_SPINES_DATASET_FILE, f"{GRP_EDGES}/{MORPH_WITH_SPINES_ID}"
@@ -269,7 +305,7 @@ def test_load_spine_meshes_for_morphology():
     meshes = load_spine_meshes_for_morphology(
         SAMPLE_MORPH_WITH_SPINES_DATASET_FILE,
         MORPH_WITH_SPINES_ID,
-        spines_are_centered=False,
+        spines_are_centered=True,
         spine_table=spine_table,
     )
 
@@ -289,12 +325,13 @@ def test_load_spine_meshes_for_morphology():
 
 def test_load_spine_meshes_for_morphology_centered():
     spine_table = load_spine_table(
-        SAMPLE_MORPH_WITH_SPINES_CENTERED_DATASET_FILE, f"{GRP_EDGES}/{MORPH_WITH_SPINES_ID}"
+        SAMPLE_MORPH_WITH_SPINES_CENTERED_DATASET_FILE,
+        f"{GRP_EDGES}/{MORPH_WITH_SPINES_CENTERED_ID}"
     )
 
     meshes = load_spine_meshes_for_morphology(
         SAMPLE_MORPH_WITH_SPINES_CENTERED_DATASET_FILE,
-        MORPH_WITH_SPINES_ID,
+        MORPH_WITH_SPINES_CENTERED_ID,
         spines_are_centered=True,
         spine_table=spine_table,
     )
@@ -309,8 +346,6 @@ def test_load_spine_meshes_for_morphology_centered():
     ]
 
     for spine in range(len(meshes)):
-        # print(f"vertices: {meshes[spine].vertices}")
-        # print(f"vs: {vertices_ref[spine]}")
         assert_array_equal(meshes[spine].faces, triangles_ref[spine])
         assert_array_equal(meshes[spine].vertices, vertices_ref[spine])
 
@@ -321,7 +356,7 @@ def test_load_soma(tmp_path):
     assert isinstance(soma, Soma)
 
 
-def test_load_morphology_with_spines():
+def test_load_morphology_with_spines_full_morph():
     morph_with_spines = load_morphology_with_spines(
         SAMPLE_MORPH_WITH_SPINES_DATASET_FILE, spines_are_centered=False
     )
@@ -329,9 +364,19 @@ def test_load_morphology_with_spines():
     assert isinstance(morph_with_spines, MorphologyWithSpines)
 
 
+def test_load_morphology_with_spines_from_collection():
+    morph_with_spines = load_morphology_with_spines(
+        SAMPLE_MORPH_WITH_SPINES_COLLECTION_FILE, morphology_name=COL_MORPH_IDS[0]
+    )
+    num_spines = 2 * len(COL_COLLECTION_IDS)
+
+    assert isinstance(morph_with_spines, MorphologyWithSpines)
+    assert num_spines == morph_with_spines.spines.spine_count
+
+
 def test_load_morphology_with_spines_load_meshes():
     morph_with_spines = load_morphology_with_spines(
-        SAMPLE_MORPH_WITH_SPINES_DATASET_FILE, spines_are_centered=False, load_meshes=True
+        SAMPLE_MORPH_WITH_SPINES_DATASET_FILE, spines_are_centered=True, load_meshes=True
     )
 
     spine_meshes = list(morph_with_spines.spines.spine_meshes_for_morphology())

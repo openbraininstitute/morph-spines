@@ -17,7 +17,8 @@ from scipy.spatial.transform import Rotation
 from morph_spines.core.h5_schema import (
     COL_AFF_SEC,
     COL_SPINE_ID,
-    COL_SPINE_MESH,
+    COL_SPINE_MORPH,
+    COL_TRANSLATION,
     GRP_MESHES,
     GRP_OFFSETS,
     GRP_SPINES,
@@ -118,7 +119,7 @@ class Spines:
         individual spines.
         """
         _spine_row = self.spine_table.loc[spine_loc]
-        _spine_mesh_grp = _spine_row[COL_SPINE_MESH]
+        _spine_mesh_grp = _spine_row[COL_SPINE_MORPH]
         _spine_id = int(_spine_row[COL_SPINE_ID])
 
         if len(self._spine_meshes) != 0:
@@ -152,7 +153,7 @@ class Spines:
         individual spines.
         """
         _spine_row = self.spine_table.loc[spine_loc]
-        _spine_mesh_grp = _spine_row[COL_SPINE_MESH]
+        _spine_mesh_grp = _spine_row[COL_SPINE_MORPH]
         _spine_id = int(_spine_row[COL_SPINE_ID])
 
         if len(self._spine_meshes) != 0:

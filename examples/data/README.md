@@ -8,22 +8,26 @@ some datasets are compressed, when indicated in their description.
 
 Each file can contain the information of one or multiple neurons, together with multiple spines.
 
+The spines data (skeletons and meshes) can be stored as a library, which can then be reused by
+multiple neurons, so the same spine morphology can be instantiated multiple times and by multiple
+neurons.
+
 
 ## `/edges` group
 
-The `/edges` group contains one spine table for each neuron present in the file. Each spine table
+The `/edges` group contains one spines table for each neuron present in the file. Each spines table
 is stored inside the neuron's ID subgroup, and it describes different properties related to the 
 neuron's spines.
 
-For example, for a neuron ID `"01234"`, the corresponding spine table will be stored under
+For example, for a neuron ID `"01234"`, the corresponding spines table will be stored under
 `/edges/01234`.
 
-The spine table can be currently stored in 2 different formats, explained below. The format is
+The spines table can be currently stored in 2 different formats, explained below. The format is
 determined by the version inside the metadata group. The supported formats are:
 - [Deprecated] v0.1: Pandas DataFrame (support will be dropped as of morph-spines v1.0)
 - v1.0: H5 group of datasets
 
-In any case, `morph-spines` recognizes the format in which the spine table is stored through its
+In any case, `morph-spines` recognizes the format in which the spines table is stored through its
 version and loads it into a Pandas DataFrame at runtime.
 
 The metadata is stored as a group under the neuron's ID subgroup called `metadata` and contains
@@ -35,13 +39,13 @@ Following the example above, the metadata would be stored as a group called
 `/edges/01234/metadata` with a `version` attribute containing an array with `[0, 1]` if it
 contains a DataFrame or `[1, 0]` if it uses the group of datasets format.
 
-### Spines' DataFrame
+### Spines table
 
 The spines table contains information about the neuron spines. Each row represents a different
 spine and each column describes a property. Therefore, the number of rows of the DataFrame equals
 the number of spines belonging to the neuron.
 
-There are 20 mandatory columns, as follows:
+There are 21 mandatory columns, as follows:
 
 - `afferent_surface_x`: Follows SONATA specification: spine's position on the surface of a
   cylindrical cell segment, radially outward from the center position in the direction of the other
@@ -52,8 +56,10 @@ There are 20 mandatory columns, as follows:
   section/segment in micrometers, X dimension (type: float)
 - `afferent_center_y`: Spine's afferent center, Y dimension (type: float)
 - `afferent_center_z`: Spine's afferent center, Z dimension (type: float)
-- `spine_morphology`: Neuron ID which the spine belongs to. This field is used to index the spines
-  in the `/spines/meshes` and `/spines/skeletons` groups (type: string)
+- `spine_morphology`: A string used to locate the spine data inside the H5 file: spine meshes under
+  `/spines/meshes` and spine skeletons under `/spines/skeletons` groups (type: string)
+- `spine_id`: Spine index, in 0-based format, where spine data is located inside the
+  `spine_morphology` datasets. Multiple rows can point at the same spine index (type: uint)
 - `spine_length`: Length of the spine, from its root to its tip (type: float)
 - `spine_orientation_vector_x`: Spine's normalized orientation vector, pointing at spine's tip from
   its root, X dimension (type: float)
@@ -76,29 +82,27 @@ There are 20 mandatory columns, as follows:
 
 Additionally, we can have the following columns as optional:
 
-- `spine_id`: Spine ID, in 0-based format, multiple rows can point at the same spine ID (type:
-  uint)
 - `spine_volume`: Spine's head volume (type: float)
 - `spine_neck_diameter`: Spine's neck diameter (type: float)
 
-The presence of the spine table is mandatory.
+The presence of the spines table is mandatory.
 
-#### Spine table stored as Pandas Dataframe
+#### Spines table stored as Pandas Dataframe
 
 In this case, the DataFrame can be read and written through Panda's `pandas.DataFrame.read_hdf()`
 and `pandas.DataFrame.to_hdf()` respectively. The internal H5 representation is managed by the
 Pandas library.
 
-#### Spine table stored as group of datasets
+#### Spines table stored as group of datasets
 
-In this case, the spine table is stored column-wise, having one H5 dataset per column. The name of
+In this case, the spines table is stored column-wise, having one H5 dataset per column. The name of
 the dataset corresponds to the name of the column.
 
 All datasets must be stored under the same H5 group (usually, the neuron ID) and must have exactly
 the same length. Datasets cannot be multidimensional datasets: only 1-dimensional arrays and
-scalars are accepted.
+scalars are accepted (in which case are interpreted as an array of a single element).
 
-The H5 group can only contain the datasets representing spine table columns. No other subgroups or
+The H5 group can only contain the datasets representing spines table columns. No other subgroups or
 datasets with different length are allowed.
 
 
@@ -160,8 +164,10 @@ The `/spines` group contains two subgroups called `/meshes` and `/skeletons`.
 
 The `/spines/meshes` subgroup contains the mesh of each spine present in the file. Spine meshes can
 be divided into subgroups. The most intuitive way to organize them is by the neuron ID where they
-belong to, although this is not a requirement. In any case, the `spine_morphology` entry in the
-`/edges` subgroup must match the subgroup where meshes are stored.
+belong to, although this is not a requirement. For example, they can also be organized as
+libraries, subdivided by spine shapes or types. In any case, the `spine_morphology` entry in the
+spines table must match the subgroup where meshes are stored and the `spine_id` entry must be
+set accordingly to index the spine location within the datasets under `spine_morphology` group.
 
 For example, if we split the spines by neuron ID, for a neuron ID `"01234"`, the corresponding 
 spine meshes will be stored under `/spines/meshes/01234`.
@@ -175,7 +181,8 @@ same way as the `/soma/meshes` are described.
 The `/offsets` dataset is a list of pairs where each pair points at the first `vertex` and 
 `triangle` of each spine respectively. For easiness, if there are `NS` spines, there will be `NS+1`
 pairs of offsets. The first pair will always be `(0, 0)` and the last one will be `(NV+1, NT+1)` 
-where `NV` is the number of vertices and `NT` is the number of triangles.
+where `NV` is the number of vertices and `NT` is the number of triangles. The `spine_id` entry in
+the spine table is used to index this list.
 
 Therefore, to get the mesh for the spine with ID `IDS`, we can do the following:
 
@@ -191,8 +198,9 @@ The presence of spine meshes datasets (`vertices`, `/triangles` and `/offsets`) 
 The `/spines/skeletons` subgroup contains the skeleton structure of each spine present in the file.
 Similarly to the `/spines/meshes/...` subgroups, we can group spines by their neuron ID, or by
 another criteria. All the skeletons of the same subgroup are grouped together in a single
-structure. In any case, the `spine_morphology` entry in the `/edges` subgroup must match the 
-subgroup where skeletons are stored.
+structure. In any case, the `spine_morphology` entry in the spine table must match the subgroup
+where skeletons are stored and the `spine_id` entry must be set accordingly to index the spine
+location within the datasets under `spine_morphology` group.
 
 For example, if we split the spines by neuron ID, for a neuron ID `"01234"`, the corresponding
 spine skeletons will be stored under `/spines/skeletons/01234`.
