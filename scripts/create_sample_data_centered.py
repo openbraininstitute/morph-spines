@@ -87,10 +87,10 @@ def generate_spine_data(neuron_name: str, neuron_idx: int, num_spines: int) -> N
     data["spine_rotation_z"] = np.array([0.0] * num_spines, dtype=np.float64)
     data["spine_rotation_w"] = np.array([1.0] * num_spines, dtype=np.float64)
 
-    data["afferent_section_id"] = np.array(10 + spines, dtype=np.int64)
-    data["afferent_segment_id"] = np.array(100 + spines, dtype=np.int64)
-    data["afferent_segment_offset"] = np.array(0.8901 * spines, dtype=np.float64)
-    data["afferent_section_pos"] = np.array(0.9012 * spines, dtype=np.float64)
+    data["afferent_section_id"] = np.array([2] * spines, dtype=np.int64)
+    data["afferent_segment_id"] = np.array([0] * spines, dtype=np.int64)
+    data["afferent_segment_offset"] = np.array([0.5] * spines, dtype=np.float64)
+    data["afferent_section_pos"] = np.array([2] * spines, dtype=np.float64)
 
     return data
 
