@@ -1,18 +1,19 @@
 from pathlib import Path
 
+import morphio
 import numpy as np
 import pandas as pd
 import pytest
 import trimesh
+from neurom import load_morphology as neurom_load_morphology
 from numpy.ma.testutils import assert_array_equal
 
-# from NeuroM.neurom.core.morphology import Neurite
 from morph_spines.core.spines import Spines
 
 SAMPLE_DATA_DIR = f"{Path(__file__).parent.parent}/data"
 SAMPLE_MORPH_WITH_SPINES_FILE = f"{SAMPLE_DATA_DIR}/morph_with_spines_schema_v1.0.h5"
 SAMPLE_MORPH_WITH_SPINES_DATAFRAME_FILE = f"{SAMPLE_DATA_DIR}/morph_with_spines_schema_v0.1.h5"
-MORPH_WITH_SPINES_ID = "01234"
+MORPH_WITH_SPINES_ID = "neuron_0"
 
 
 @pytest.fixture
@@ -21,12 +22,17 @@ def spines():
     spine_table = pd.read_hdf(
         SAMPLE_MORPH_WITH_SPINES_DATAFRAME_FILE, key=str(f"/edges/{MORPH_WITH_SPINES_ID}")
     )
+    coll = morphio.Collection(SAMPLE_MORPH_WITH_SPINES_DATAFRAME_FILE)
+    spines_skeletons = neurom_load_morphology(
+        coll.load(f"/spines/skeletons/{MORPH_WITH_SPINES_ID}")
+    )
+
     return Spines(
-        meshes_filepath=SAMPLE_MORPH_WITH_SPINES_FILE,
+        meshes_filepath=SAMPLE_MORPH_WITH_SPINES_DATAFRAME_FILE,
         morphology_name=MORPH_WITH_SPINES_ID,
         spine_table=spine_table,
-        centered_spine_skeletons=False,
-        spines_are_centered=False,
+        centered_spine_skeletons=spines_skeletons,
+        spines_are_centered=True,
     )
 
 
@@ -38,12 +44,12 @@ def test_spine_transformations(spines):
     expected_transformations = (
         np.array(
             [
-                [0.02969959, -0.3423923, 0.93908756],
-                [0.98483344, 0.17069435, 0.03108899],
-                [-0.17094157, 0.92392151, 0.34226894],
+                [1.0, 0.0, 0.0],
+                [0.0, 1.0, 0.0],
+                [0.0, 0.0, 1.0],
             ]
         ),
-        np.array([0.1, 0.11, 0.101]),
+        np.array([2.0, 2.0, 3.0]),
     )
     transformations = spines.spine_transformations(0)
     assert len(transformations[0].as_matrix()) == len(expected_transformations[0])
@@ -56,6 +62,13 @@ def test_spine_transformations(spines):
     assert np.allclose(transformations[1], expected_transformations[1])  # , rtol=1e-6, atol=1e-7)
 
 
+def test__transform_spine_skeletons_fail_num_spines(spines):
+    spines.spine_table.drop(index=0, inplace=True)
+
+    with pytest.raises(ValueError):
+        spines._transform_spine_skeletons()
+
+
 # def test_spine_skeletons(spines):
 #    spine_skeletons = spines.spine_skeletons
 #    assert len(spine_skeletons) == 2
@@ -64,11 +77,11 @@ def test_spine_transformations(spines):
 def test__spine_mesh_points(spines):
     expected_points = np.array(
         [
-            [2, 2, 2],
-            [3, 2, 4],
-            [2, 3, 4],
-            [1, 2, 4],
-            [2, 1, 4],
+            [0.0, 0.0, -1.0],
+            [1.0, 0.0, 1.0],
+            [0.0, 1.0, 1.0],
+            [-1.0, 0.0, 1.0],
+            [0.0, -1.0, 1.0],
         ]
     )
     points = spines._spine_mesh_points(spine_loc=0, transform=False)

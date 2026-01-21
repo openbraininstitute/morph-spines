@@ -19,7 +19,7 @@ from morph_spines.utils.morph_spine_loader import (
 
 SAMPLE_DATA_DIR = f"{Path(__file__).parent.parent}/data"
 SAMPLE_MORPH_WITH_SPINES_DATASET_FILE = f"{SAMPLE_DATA_DIR}/morph_with_spines_schema_v1.0.h5"
-MORPH_WITH_SPINES_ID = "01234"
+MORPH_WITH_SPINES_ID = "neuron_0"
 
 
 def test__resolve_morphology_name_single():
@@ -186,8 +186,8 @@ def test_load_spine_table_success():
             "afferent_section_id",
         ]
     ).issubset(set(df.columns))
-    assert df.loc[0, "afferent_surface_x"] == np.float64(0.1)
-    assert df.loc[1, "spine_length"] == 2
+    assert df.loc[0, "afferent_surface_x"] == np.float64(2.0)
+    assert df.loc[1, "spine_length"] == np.float64(3.0)
 
 
 def test_load_spine_table_pandas_df(tmp_path):
