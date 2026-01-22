@@ -4,6 +4,7 @@ Provides utilities to manipulate spatial objects, like skeletons and meshes belo
 spines or soma.
 """
 
+import numpy as np
 import pandas as pd
 from numpy.typing import NDArray
 from scipy.spatial.transform import Rotation
@@ -19,7 +20,7 @@ def spine_transformations(spine_table: pd.DataFrame, spine_loc: int) -> tuple[Ro
     global coordinate system of the neuron.
     """
     spine_row = spine_table.loc[spine_loc]
-    spine_rotation = Rotation.from_quat(spine_row[COL_ROTATION].to_numpy(dtype=float))
+    spine_rotation = Rotation.from_quat(np.array(spine_row[COL_ROTATION].to_numpy(dtype=float)))
     spine_translation = spine_row[COL_TRANSLATION].to_numpy(dtype=float)
 
     return spine_rotation, spine_translation
