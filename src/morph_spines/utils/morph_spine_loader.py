@@ -312,9 +312,9 @@ def load_spine_meshes_for_morphology(
     for spine_mesh_group, spine_group_df in spines_df.groupby(COL_SPINE_MORPH):
         with h5py.File(filepath, "r") as h5_file:
             morphology_meshes = h5_file[GRP_SPINES][GRP_MESHES][spine_mesh_group]
-            all_spine_group_triangles = np.asarray(morphology_meshes[GRP_TRIANGLES], dtype=int)
-            all_spine_group_vertices = np.asarray(morphology_meshes[GRP_VERTICES], dtype=float)
-            all_spine_group_offsets = np.asarray(morphology_meshes[GRP_OFFSETS], dtype=int)
+            all_spine_group_triangles = np.array(morphology_meshes[GRP_TRIANGLES], dtype=int)
+            all_spine_group_vertices = np.array(morphology_meshes[GRP_VERTICES], dtype=float)
+            all_spine_group_offsets = np.array(morphology_meshes[GRP_OFFSETS], dtype=int)
 
         # Iterate over the spines of the group, in spine table order
         # We do it now to avoid exploding memory consumption: process all the spines inside the
