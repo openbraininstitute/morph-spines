@@ -4,6 +4,8 @@ Provides reader functions to load the representation of a neuron morphology
 with spines from an HDF5 file.
 """
 
+from typing import cast
+
 import h5py
 import morphio
 import numpy as np
@@ -284,63 +286,63 @@ def load_spine_meshes_for_morphology(
     filepath: str,
     morphology_name: str,
     spines_are_centered: bool,
-    spine_table: pd.DataFrame,
+    spine_table: pd.DataFrame | None,
 ) -> list[trimesh.Trimesh]:
     """Get all the spine meshes of the morphology.
+
+    If a spine table is passed, all the spines of the table are loaded. Otherwise, the spine table
+    is loaded from the given file and the given morphology name.
 
     An array of spine meshes is returned. The meshes are already rotated and translated with
     respect to the global morphology coordinates. There is an implicit index for each spine
     mesh that matches the spine index order from the spine table.
     """
-    # Get the list of the spines belonging to the morphology
-    spines_df = spine_table.loc[spine_table[COL_SPINE_MORPH] == morphology_name]
-    # Get the list of paths where meshes are stored, since we want all the meshes of the
-    # morphology, we can optimize the data access by just accessing once per mesh group path.
-    # However, for correctness, we still want to preserve the order in the spine table
-    spine_id_mesh_groups = spines_df.loc[:, [COL_SPINE_ID, COL_SPINE_MORPH]]
-    spine_mesh_groups = spine_id_mesh_groups[COL_SPINE_MORPH].drop_duplicates()
+    # If no spine table is given, get the list of the spines belonging to the morphology
+    if spine_table is None:
+        spine_table = load_spine_table(filepath, morphology_name)
 
-    # To preserve spine order, we will add the meshes one by one in the dataframe, then return only
-    # the mesh column
-    spines_df["spine_mesh"] = None
-    for spine_mesh_group in spine_mesh_groups:
-        # Read all the datasets under the same group at once and store them in memory
-        # We may be reading more data than needed, but it will still be better for I/O efficiency
+    spines_df = spine_table[[COL_SPINE_ID, COL_SPINE_MORPH]]
+
+    # To preserve spine table order, we have to add the meshes one by one to the meshes list, so we
+    # first preallocate the whole list
+    spine_meshes = [trimesh.Trimesh()] * len(spine_table)
+
+    # In order to optimize I/O, we load all the meshes for each mesh group at once, then filter for
+    # the spines we want
+    for spine_mesh_group, spine_group_df in spines_df.groupby(COL_SPINE_MORPH):
         with h5py.File(filepath, "r") as h5_file:
             morphology_meshes = h5_file[GRP_SPINES][GRP_MESHES][spine_mesh_group]
-            all_spine_triangles = np.array(morphology_meshes[GRP_TRIANGLES].astype(int))
-            all_spine_vertices = np.array(morphology_meshes[GRP_VERTICES].astype(float))
-            all_spine_offsets = np.array(morphology_meshes[GRP_OFFSETS].astype(int))
+            all_spine_group_triangles = np.asarray(morphology_meshes[GRP_TRIANGLES], dtype=int)
+            all_spine_group_vertices = np.asarray(morphology_meshes[GRP_VERTICES], dtype=float)
+            all_spine_group_offsets = np.asarray(morphology_meshes[GRP_OFFSETS], dtype=int)
 
-        # Split meshes according to their spine index (ID), take only the ones present in the spine
-        # table and populate the 'spine_mesh' column accordingly
-        # To avoid exploding memory consumption, process all the spines inside the current group
-        # and once finished, move to the next group
-        spine_ids = spine_id_mesh_groups.loc[
-            spine_id_mesh_groups[COL_SPINE_MORPH] == spine_mesh_group,
-            [COL_SPINE_ID],
-        ]
+        # Iterate over the spines of the group, in spine table order
+        # We do it now to avoid exploding memory consumption: process all the spines inside the
+        # current group and once finished, move to the next group
+        for row in spine_group_df.itertuples():
+            # We need to make a distinction between:
+            # table_idx: index of the spine in the spine table (row number)
+            # spine_id: column in the spine table that defines the offsets at which we can find the
+            # spine data
+            # In order to preserve the spine order in the spine table, we need both
+            table_idx = cast(int, row.Index)
+            spine_id = int(row[1])
 
-        # We need to make a distinction between:
-        # table_idx: index of the spine in the spine table (row number)
-        # spine_id: column in the spine table that defines the offsets at which we can find the
-        # spine data
-        # In order to preserve the spine order in the spine table, we need both
-        for table_idx, spine_id in spine_ids.itertuples():
-            vertex_start = all_spine_offsets[spine_id, 0]
-            vertex_end = all_spine_offsets[spine_id + 1, 0]
-            spine_vertices = all_spine_vertices[vertex_start:vertex_end]
+            vertex_start, vertex_end = all_spine_group_offsets[spine_id : spine_id + 2, 0]
+            triangle_start, triangle_end = all_spine_group_offsets[spine_id : spine_id + 2, 1]
+
+            spine_vertices = all_spine_group_vertices[vertex_start:vertex_end]
+            spine_triangles = all_spine_group_triangles[triangle_start:triangle_end]
+
             if spines_are_centered:
                 spine_vertices = geometry.transform_for_spine(
                     spine_table, table_idx, spine_vertices
                 )
-            triangle_start = all_spine_offsets[spine_id, 1]
-            triangle_end = all_spine_offsets[spine_id + 1, 1]
-            spine_triangles = all_spine_triangles[triangle_start:triangle_end]
-            spine_mesh = trimesh.Trimesh(vertices=spine_vertices, faces=spine_triangles)
-            spines_df.loc[table_idx, "spine_mesh"] = spine_mesh  # type: ignore[call-overload]
 
-    return spines_df["spine_mesh"].tolist()
+            spine_mesh = trimesh.Trimesh(vertices=spine_vertices, faces=spine_triangles)
+            spine_meshes[table_idx] = spine_mesh
+
+    return spine_meshes
 
 
 def load_spines(
