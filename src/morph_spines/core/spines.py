@@ -156,7 +156,7 @@ class Spines:
         _spine_id = int(_spine_row[COL_SPINE_ID])
 
         if len(self._spine_meshes) != 0:
-            triangles = self._spine_meshes[_spine_id].triangles
+            triangles = self._spine_meshes[_spine_id].faces
 
         else:
             with h5py.File(self._filepath, "r") as h5_file:
@@ -288,7 +288,7 @@ class Spines:
                 vertices=geometry.inverse_transform_for_spine(
                     self.spine_table, spine_idx, spine_mesh.vertices
                 ),
-                faces=spine_mesh.triangles,
+                faces=spine_mesh.faces,
             )
             yield centered_spine_mesh
 
