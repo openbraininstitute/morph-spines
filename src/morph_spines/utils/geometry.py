@@ -49,3 +49,14 @@ def inverse_transform_for_spine(
     spine_rotation, spine_translation = spine_transformations(spine_table, spine_loc)
 
     return spine_rotation.inv().apply(spine_points - spine_translation.reshape((1, -1)))
+
+
+def inverse_transform_matrix_for_spine(spine_table: pd.DataFrame, spine_loc: int) -> NDArray:
+    """Get the spine inverse transform matrix from the spine table information."""
+    rotation, translation = spine_transformations(spine_table, spine_loc)
+
+    transform_matrix = np.eye(4)
+    transform_matrix[:3, :3] = rotation.inv().as_matrix()
+    transform_matrix[:3, 3] = -rotation.inv().apply(translation)
+
+    return transform_matrix

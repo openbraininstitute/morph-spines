@@ -407,3 +407,21 @@ def test_load_morphology_with_spines_load_meshes_centered():
     assert isinstance(
         morph_with_spines.spines.compound_spine_meshes_for_morphology(), trimesh.Trimesh
     )
+
+
+def test_load_morphology_with_spines_from_collection_load_meshes_centered():
+    morph_with_spines = load_morphology_with_spines(
+        SAMPLE_MORPH_WITH_SPINES_COLLECTION_FILE,
+        morphology_name=MORPH_WITH_SPINES_ID,
+        spines_are_centered=True,
+        load_meshes=True,
+    )
+
+    spine_meshes = list(morph_with_spines.spines.spine_meshes_for_morphology())
+
+    assert isinstance(morph_with_spines, MorphologyWithSpines)
+    assert len(spine_meshes) == 6
+    assert isinstance(spine_meshes[0], trimesh.Trimesh)
+    assert isinstance(
+        morph_with_spines.spines.compound_spine_meshes_for_morphology(), trimesh.Trimesh
+    )
