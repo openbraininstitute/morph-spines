@@ -1,4 +1,4 @@
-"""Represents the spines of a neron morphology with spines.
+"""Represents the spines of a neuron morphology with spines.
 
 Provides utility and data access to a representation of a
 neuron morphology with individual spines.
@@ -7,6 +7,7 @@ neuron morphology with individual spines.
 from collections.abc import Iterator
 
 import h5py
+import numpy as np
 import pandas
 import trimesh
 from neurom.core.morphology import Morphology, Neurite
@@ -15,16 +16,15 @@ from scipy.spatial.transform import Rotation
 
 from morph_spines.core.h5_schema import (
     COL_AFF_SEC,
-    COL_ROTATION,
     COL_SPINE_ID,
     COL_SPINE_MORPH,
-    COL_TRANSLATION,
     GRP_MESHES,
     GRP_OFFSETS,
     GRP_SPINES,
     GRP_TRIANGLES,
     GRP_VERTICES,
 )
+from morph_spines.utils import geometry
 
 
 class Spines:
@@ -37,6 +37,7 @@ class Spines:
         spine_table: pandas.DataFrame,
         centered_spine_skeletons: Morphology,
         spines_are_centered: bool = True,
+        spine_meshes: list[trimesh.Trimesh] | None = None,
     ) -> None:
         """Default constructor.
 
@@ -47,6 +48,7 @@ class Spines:
         self.spine_table = spine_table
         self._centered_spine_skeletons = centered_spine_skeletons
         self._spines_are_centered = spines_are_centered
+        self._spine_meshes = spine_meshes if spine_meshes is not None else []
 
         if self._spines_are_centered:
             self._spine_skeletons = self._transform_spine_skeletons()
@@ -56,7 +58,7 @@ class Spines:
     @property
     def spine_count(self) -> int:
         """Number of spines on morphology."""
-        return self.spine_table.shape[0]
+        return len(self.spine_table)
 
     def spine_transformations(self, spine_loc: int) -> tuple[Rotation, NDArray]:
         """Spine coordinate system transformations.
@@ -65,11 +67,7 @@ class Spines:
         (origin near its root, y-axis pointing towards its tip) to the
         global coordinate system of the neuron.
         """
-        spine_row = self.spine_table.loc[spine_loc]
-        spine_rotation = Rotation.from_quat(spine_row[COL_ROTATION].to_numpy(dtype=float))
-        spine_transformation = spine_row[COL_TRANSLATION].to_numpy(dtype=float)
-
-        return spine_rotation, spine_transformation
+        return geometry.spine_transformations(self.spine_table, spine_loc)
 
     def transform_for_spine(self, spine_loc: int, spine_points: NDArray) -> NDArray:
         """Apply spine coordinate system transformations.
@@ -77,8 +75,7 @@ class Spines:
         Apply the transformation from the local spine coordinate system
         to the global neuron coordinate system to a set of points.
         """
-        spine_rotation, spine_transformation = self.spine_transformations(spine_loc)
-        return spine_rotation.apply(spine_points) + spine_transformation.reshape((1, -1))
+        return geometry.transform_for_spine(self.spine_table, spine_loc, spine_points)
 
     def _transform_spine_skeletons(self) -> Morphology:
         """Apply transformations to spine skeletons.
@@ -87,10 +84,10 @@ class Spines:
         spine skeletons of this class to the global neuron coordinate system.
         """
         spines = self._centered_spine_skeletons.to_morphio().as_mutable()
-        if len(spines.root_sections) != self.spine_table.shape[0]:
+        if len(spines.root_sections) != self.spine_count:
             raise ValueError(
                 f"Number of root sections ({len(spines.root_sections)}) "
-                f"does not match spine table rows ({self.spine_table.shape[0]})."
+                f"does not match spine table rows ({self.spine_count})."
             )
 
         for spine_idx, root_spine in enumerate(spines.root_sections):
@@ -117,22 +114,34 @@ class Spines:
     def _spine_mesh_points(self, spine_loc: int, transform: bool = True) -> NDArray:
         """Points of spine mesh.
 
-        The points (i.e., vertices) of the meshes describing the shape of
-        individual spines.
+        The points (i.e., vertices) of the meshes describing the shape of individual spines in
+        local (transform=False) or global (transform=True) coordinates.
         """
-        _spine_row = self.spine_table.loc[spine_loc]
-        _spine_mesh_grp = _spine_row[COL_SPINE_MORPH]
-        _spine_id = int(_spine_row[COL_SPINE_ID])
+        if len(self._spine_meshes) != 0:
+            spine_points = np.array(self._spine_meshes[spine_loc].vertices)
 
-        with h5py.File(self._filepath, "r") as h5_file:
-            group = h5_file[GRP_SPINES][GRP_MESHES][_spine_mesh_grp]  # [_spine_id_grp]
-            vertex_start = group[GRP_OFFSETS][_spine_id, 0]
-            vertex_end = group[GRP_OFFSETS][_spine_id + 1, 0]
-            spine_points = group[GRP_VERTICES][vertex_start:vertex_end].astype(float)
+            if not transform:
+                # Spine mesh points are already in global coordinates, so we need to convert them
+                # back to the local spine coordinate system
+                spine_points = geometry.inverse_transform_for_spine(
+                    self.spine_table, spine_loc, spine_points
+                )
 
-        if not transform:
-            return spine_points
-        return self.transform_for_spine(spine_loc, spine_points)
+        else:
+            spine_row = self.spine_table.loc[spine_loc]
+            spine_mesh_grp = spine_row[COL_SPINE_MORPH]
+            spine_idx = int(spine_row[COL_SPINE_ID])
+            with h5py.File(self._filepath, "r") as h5_file:
+                group = h5_file[GRP_SPINES][GRP_MESHES][spine_mesh_grp]
+                vertex_start, vertex_end = group[GRP_OFFSETS][spine_idx : spine_idx + 2, 0]
+                spine_points = group[GRP_VERTICES][vertex_start:vertex_end].astype(float)
+
+            if transform:
+                spine_points = geometry.transform_for_spine(
+                    self.spine_table, spine_loc, spine_points
+                )
+
+        return spine_points
 
     def spine_mesh_triangles(self, spine_loc: int) -> NDArray:
         """Triangles of spine mesh.
@@ -140,14 +149,18 @@ class Spines:
         The triangles (i.e., faces) of the meshes describing the shape of
         individual spines.
         """
-        _spine_row = self.spine_table.loc[spine_loc]
-        _spine_mesh_grp = _spine_row[COL_SPINE_MORPH]
-        _spine_id = int(_spine_row[COL_SPINE_ID])
-        with h5py.File(self._filepath, "r") as h5_file:
-            group = h5_file[GRP_SPINES][GRP_MESHES][_spine_mesh_grp]  # [_spine_id_grp]
-            vertex_start = group[GRP_OFFSETS][_spine_id, 1]
-            vertex_end = group[GRP_OFFSETS][_spine_id + 1, 1]
-            triangles = group[GRP_TRIANGLES][vertex_start:vertex_end].astype(int)
+        if len(self._spine_meshes) != 0:
+            triangles = self._spine_meshes[spine_loc].faces
+
+        else:
+            spine_row = self.spine_table.loc[spine_loc]
+            spine_mesh_grp = spine_row[COL_SPINE_MORPH]
+            spine_idx = int(spine_row[COL_SPINE_ID])
+            with h5py.File(self._filepath, "r") as h5_file:
+                group = h5_file[GRP_SPINES][GRP_MESHES][spine_mesh_grp]
+                triangle_start, triangle_end = group[GRP_OFFSETS][spine_idx : spine_idx + 2, 1]
+                triangles = group[GRP_TRIANGLES][triangle_start:triangle_end].astype(int)
+
         return triangles
 
     def spine_mesh_points(self, spine_loc: int) -> NDArray:
@@ -172,9 +185,13 @@ class Spines:
         Returns the mesh (as a trimesh.Trimesh) of an individual spine.
         In global neuron coordinates.
         """
-        spine_mesh = trimesh.Trimesh(
-            vertices=self.spine_mesh_points(spine_loc), faces=self.spine_mesh_triangles(spine_loc)
-        )
+        if len(self._spine_meshes) != 0:
+            spine_mesh = self._spine_meshes[spine_loc]
+        else:
+            spine_mesh = trimesh.Trimesh(
+                vertices=self.spine_mesh_points(spine_loc),
+                faces=self.spine_mesh_triangles(spine_loc),
+            )
         return spine_mesh
 
     def centered_spine_mesh(self, spine_loc: int) -> trimesh.Trimesh:
@@ -183,11 +200,20 @@ class Spines:
         Returns the mesh (as a trimesh.Trimesh) of an individual spine.
         In local spine coordinates.
         """
-        spine_mesh = trimesh.Trimesh(
-            vertices=self.centered_mesh_points(spine_loc),
-            faces=self.spine_mesh_triangles(spine_loc),
-        )
-        return spine_mesh
+        # Even if meshes are loaded, they're in global coordinates, so we need to transform the
+        # points into local coordinates before creating a new mesh.
+        # However, there's an exception to this case: when the initial H5 data is not centered, in
+        # which case centered data equals the non-centered H5 data.
+        if not self._spines_are_centered:
+            centered_spine_mesh = self.spine_mesh(spine_loc)
+        else:
+            centered_spine_mesh = self.spine_mesh(spine_loc).copy()
+            transform_matrix = geometry.inverse_transform_matrix_for_spine(
+                self.spine_table, spine_loc
+            )
+            centered_spine_mesh.apply_transform(transform_matrix)
+
+        return centered_spine_mesh
 
     def spine_indices_for_section(self, section_id: int) -> NDArray:
         """Indices of spines on a given section.
@@ -230,10 +256,41 @@ class Spines:
         for spine_idx in self.spine_indices_for_section(section_id):
             yield self.centered_spine_mesh(spine_idx)
 
-    def compound_centered_spine_mesh_for_section(self, section_id: int) -> trimesh.Trimesh:
-        """Single spine mesh for a given section.
+    def spine_meshes_for_morphology(self) -> Iterator[trimesh.Trimesh]:
+        """Return all the spine meshes of the morphology.
 
-        A single compound mesh for all spines located on the section is returned.
-        Meshes are transformed to be centered and upright.
+        An array of spine meshes is returned. The meshes are already rotated and translated with
+        respect to the global morphology coordinates. There is an implicit index for each spine
+        mesh that matches the spine index order from the spine table.
         """
-        return trimesh.util.concatenate(self.centered_spine_meshes_for_section(section_id))
+        # If meshes are not loaded, load them now
+        if len(self._spine_meshes) == 0:
+            self._spine_meshes = []
+            for spine_loc in range(len(self.spine_table)):
+                self._spine_meshes.append(self.spine_mesh(spine_loc))
+
+        yield from self._spine_meshes
+
+    def compound_spine_meshes_for_morphology(self) -> trimesh.Trimesh:
+        """Return all the spine meshes of the morphology unified into a single mesh.
+
+        The mesh is already rotated and translated with respect to the global morphology
+        coordinates.
+        """
+        return trimesh.util.concatenate(self.spine_meshes_for_morphology())
+
+    def centered_spine_meshes_for_morphology(self) -> Iterator[trimesh.Trimesh]:
+        """Return all the spine meshes of the morphology.
+
+        An array of spine meshes is returned. The meshes are in local spine coordinates.
+        There is an implicit index for each spine mesh that matches the spine index order
+        from the spine table.
+        """
+        # If meshes are not loaded, load them now
+        if len(self._spine_meshes) == 0:
+            self._spine_meshes = []
+            for spine_loc in range(len(self.spine_table)):
+                self._spine_meshes.append(self.spine_mesh(spine_loc))
+
+        for spine_idx in range(self.spine_count):
+            yield self.centered_spine_mesh(spine_idx)

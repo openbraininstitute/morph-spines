@@ -193,12 +193,3 @@ def test_centered_spine_meshes_for_section(spines_meshes):
     assert len(meshes) == 2
     assert isinstance(meshes[0], trimesh.Trimesh)
     assert_allclose(meshes[0].vertices, expected_points)
-
-
-def test_compound_centered_spine_mesh_for_section(spines_meshes):
-    mesh = spines_meshes.compound_centered_spine_mesh_for_section(2)
-    expected_points = [0.0, 0.0, -2.0]
-
-    assert isinstance(mesh, trimesh.Trimesh)
-    assert len(mesh.vertices) == 9
-    assert_allclose(mesh.vertices[5], expected_points)
