@@ -134,8 +134,6 @@ class Spines:
             with h5py.File(self._filepath, "r") as h5_file:
                 group = h5_file[GRP_SPINES][GRP_MESHES][spine_mesh_grp]
                 vertex_start, vertex_end = group[GRP_OFFSETS][spine_idx : spine_idx + 2, 0]
-                # vertex_start = group[GRP_OFFSETS][spine_idx, 0]
-                # vertex_end = group[GRP_OFFSETS][spine_idx + 1, 0]
                 spine_points = group[GRP_VERTICES][vertex_start:vertex_end].astype(float)
 
             if transform:
@@ -160,8 +158,6 @@ class Spines:
             spine_idx = int(spine_row[COL_SPINE_ID])
             with h5py.File(self._filepath, "r") as h5_file:
                 group = h5_file[GRP_SPINES][GRP_MESHES][spine_mesh_grp]
-                # triangle_start = group[GRP_OFFSETS][spine_idx, 1]
-                # triangle_end = group[GRP_OFFSETS][spine_idx + 1, 1]
                 triangle_start, triangle_end = group[GRP_OFFSETS][spine_idx : spine_idx + 2, 1]
                 triangles = group[GRP_TRIANGLES][triangle_start:triangle_end].astype(int)
 
