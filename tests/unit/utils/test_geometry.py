@@ -2,15 +2,15 @@ import numpy as np
 import pandas as pd
 import pytest
 from numpy.testing import assert_allclose
+from scipy.spatial.transform import Rotation
 
 from morph_spines.utils import geometry
 
 
 @pytest.fixture
 def spine_rotation_ref():
-    return np.array(
-        [0.18257419, 0.36514837, 0.54772256, 0.73029674],
-        dtype=np.float64,
+    return Rotation.from_quat(
+        np.array([0.18257419, 0.36514837, 0.54772256, 0.73029674], dtype=np.float64)
     )
 
 
@@ -51,28 +51,21 @@ def spine_points_transformed_ref():
     return np.array([0.211, 0.422, 0.633], dtype=np.float64)
 
 
-def test_spine_transformations(spine_table, spine_loc, spine_rotation_ref, spine_translation_ref):
-    spine_rotation, spine_translation = geometry.spine_transformations(spine_table, spine_loc)
-
-    assert_allclose(spine_rotation_ref, spine_rotation.as_quat())
-    assert_allclose(spine_translation_ref, spine_translation)
-
-
 def test_transform_for_spine(
-    spine_table, spine_loc, spine_points_ref, spine_points_transformed_ref
+    spine_rotation_ref, spine_translation_ref, spine_points_ref, spine_points_transformed_ref
 ):
     spine_points_transformed = geometry.transform_for_spine(
-        spine_table, spine_loc, spine_points_ref
+        spine_rotation_ref, spine_translation_ref, spine_points_ref
     )
 
     assert_allclose(spine_points_transformed_ref, spine_points_transformed[0])
 
 
 def test_inverse_transform_for_spine(
-    spine_table, spine_loc, spine_points_ref, spine_points_transformed_ref
+    spine_rotation_ref, spine_translation_ref, spine_points_ref, spine_points_transformed_ref
 ):
     spine_points = geometry.inverse_transform_for_spine(
-        spine_table, spine_loc, spine_points_transformed_ref
+        spine_rotation_ref, spine_translation_ref, spine_points_transformed_ref
     )
 
     assert_allclose(spine_points_ref, spine_points[0])

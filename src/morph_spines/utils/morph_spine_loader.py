@@ -14,11 +14,14 @@ import trimesh
 from morphio.mut import Morphology as MutableMorphology
 from neurom.core.morphology import Morphology
 from neurom.io.utils import load_morphology as neurom_load_morphology
+from scipy.spatial.transform import Rotation
 
 from morph_spines.core.h5_schema import (
     ATT_VERSION,
+    COL_ROTATION,
     COL_SPINE_ID,
     COL_SPINE_MORPH,
+    COL_TRANSLATION,
     GRP_EDGES,
     GRP_MESHES,
     GRP_METADATA,
@@ -335,8 +338,13 @@ def load_spine_meshes_for_morphology(
             spine_triangles = all_spine_group_triangles[triangle_start:triangle_end]
 
             if spines_are_centered:
+                spine_row = spine_table.loc[table_idx]
+                spine_rotation = Rotation.from_quat(
+                    np.array(spine_row[COL_ROTATION].to_numpy(dtype=float))
+                )
+                spine_translation = spine_row[COL_TRANSLATION].to_numpy(dtype=float)
                 spine_vertices = geometry.transform_for_spine(
-                    spine_table, table_idx, spine_vertices
+                    spine_rotation, spine_translation, spine_vertices
                 )
 
             spine_mesh = trimesh.Trimesh(vertices=spine_vertices, faces=spine_triangles)
