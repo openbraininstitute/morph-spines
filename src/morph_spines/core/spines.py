@@ -16,8 +16,10 @@ from scipy.spatial.transform import Rotation
 
 from morph_spines.core.h5_schema import (
     COL_AFF_SEC,
+    COL_ROTATION,
     COL_SPINE_ID,
     COL_SPINE_MORPH,
+    COL_TRANSLATION,
     GRP_MESHES,
     GRP_OFFSETS,
     GRP_SPINES,
@@ -67,7 +69,11 @@ class Spines:
         (origin near its root, y-axis pointing towards its tip) to the
         global coordinate system of the neuron.
         """
-        return geometry.spine_transformations(self.spine_table, spine_loc)
+        spine_row = self.spine_table.loc[spine_loc]
+        spine_rotation = Rotation.from_quat(np.array(spine_row[COL_ROTATION].to_numpy(dtype=float)))
+        spine_translation = spine_row[COL_TRANSLATION].to_numpy(dtype=float)
+
+        return spine_rotation, spine_translation
 
     def transform_for_spine(self, spine_loc: int, spine_points: NDArray) -> NDArray:
         """Apply spine coordinate system transformations.
@@ -75,7 +81,8 @@ class Spines:
         Apply the transformation from the local spine coordinate system
         to the global neuron coordinate system to a set of points.
         """
-        return geometry.transform_for_spine(self.spine_table, spine_loc, spine_points)
+        spine_rotation, spine_translation = self.spine_transformations(spine_loc)
+        return geometry.transform_for_spine(spine_rotation, spine_translation, spine_points)
 
     def _transform_spine_skeletons(self) -> Morphology:
         """Apply transformations to spine skeletons.
@@ -123,8 +130,9 @@ class Spines:
             if not transform:
                 # Spine mesh points are already in global coordinates, so we need to convert them
                 # back to the local spine coordinate system
+                spine_rotation, spine_translation = self.spine_transformations(spine_loc)
                 spine_points = geometry.inverse_transform_for_spine(
-                    self.spine_table, spine_loc, spine_points
+                    spine_rotation, spine_translation, spine_points
                 )
 
         else:
@@ -137,8 +145,9 @@ class Spines:
                 spine_points = group[GRP_VERTICES][vertex_start:vertex_end].astype(float)
 
             if transform:
+                spine_rotation, spine_translation = self.spine_transformations(spine_loc)
                 spine_points = geometry.transform_for_spine(
-                    self.spine_table, spine_loc, spine_points
+                    spine_rotation, spine_translation, spine_points
                 )
 
         return spine_points
@@ -208,8 +217,9 @@ class Spines:
             centered_spine_mesh = self.spine_mesh(spine_loc)
         else:
             centered_spine_mesh = self.spine_mesh(spine_loc).copy()
+            spine_rotation, spine_translation = self.spine_transformations(spine_loc)
             transform_matrix = geometry.inverse_transform_matrix_for_spine(
-                self.spine_table, spine_loc
+                spine_rotation, spine_translation
             )
             centered_spine_mesh.apply_transform(transform_matrix)
 

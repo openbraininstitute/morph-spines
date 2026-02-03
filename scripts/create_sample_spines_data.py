@@ -4,6 +4,9 @@ from itertools import cycle
 
 import numpy as np
 from numpy.typing import NDArray
+from scipy.spatial.transform import Rotation
+
+from morph_spines.utils import geometry
 
 # Global variables
 # Format versions
@@ -149,7 +152,7 @@ def generate_spines_table(
             data[spine_idx]["afferent_center_z"] = data[spine_idx]["afferent_surface_z"]
 
             data[spine_idx]["spine_id"] = spine_coll_idx
-            data[spine_idx]["spine_morphology"] = coll_name
+            data[spine_idx]["spine_morphology"] = coll_name.encode("utf-8")
 
             # To simplify the calculation of the spine lenght, we take the first and last point of
             # the spine and compute the difference on the Y axis. This is not biologically correct,
@@ -363,3 +366,155 @@ def generate_all_spines_meshes(spines_skeletons: dict[str, dict[str, NDArray]]) 
         all_spines_meshes[coll_name] = generate_spines_meshes(shape, spines_skeletons[coll_name])
 
     return all_spines_meshes
+
+
+def transform_spines_coordinates_for_neuron(
+    centered_spines_table: dict, centered_spines_skeletons: dict, centered_spines_meshes: dict
+) -> tuple[dict, dict, dict]:
+    """Transformed centered spines into their global coordinates position.
+
+    This function transforms the given neuron's spines table, skeletons and meshes so that centered
+    spines become not centered (i.e. placed at their global neuron coordinates).
+    Restriction: spines must be grouped by neuron (grouping by collection is not supported).
+
+    Args:
+        centered_spines_table: Dictionary with the neuron's spines table to be processed
+        centered_spines_skeletons: Dictionary with the spines skeletons to be processed
+        centered_spines_meshes: Dictionary with the spines meshes to be processed
+
+    Returns: The neuron's spines table and spines skeletons rotated and translated into their
+    global neuron coordinates
+    """
+    data_table = np.copy(centered_spines_table["spines_table_data"])
+    skeletons_points = np.copy(centered_spines_skeletons["points"])
+    meshes_points = np.copy(centered_spines_meshes["vertices"])
+
+    for spine_idx in range(len(data_table)):
+        # Rotation and translation matrices are the same for all points in the spine
+        spine_row = centered_spines_table["spines_table_data"][spine_idx]
+        spine_rotation = Rotation.from_quat(
+            np.array(
+                [
+                    spine_row["spine_rotation_x"],
+                    spine_row["spine_rotation_y"],
+                    spine_row["spine_rotation_z"],
+                    spine_row["spine_rotation_w"],
+                ],
+                dtype=float,
+            )
+        )
+        spine_translation = np.array(
+            [
+                spine_row["afferent_surface_x"],
+                spine_row["afferent_surface_y"],
+                spine_row["afferent_surface_z"],
+            ],
+            dtype=float,
+        )
+
+        # Transform skeleton points, we can process all points at once
+        skel_start_offset = centered_spines_skeletons["structure"][spine_idx][0]
+        next_skel_offset = (
+            centered_spines_skeletons["structure"][spine_idx + 1][0]
+            if spine_idx + 1 < len(centered_spines_skeletons["structure"])
+            else len(centered_spines_skeletons["points"])
+        )
+
+        skeletons_points[skel_start_offset:next_skel_offset, :3] = geometry.transform_for_spine(
+            spine_rotation,
+            spine_translation,
+            centered_spines_skeletons["points"][skel_start_offset:next_skel_offset, :3],
+        )
+
+        # Transform mesh points, we can process all points at once
+        mesh_start_offset = centered_spines_meshes["offsets"][spine_idx][0]
+        next_mesh_offset = centered_spines_meshes["offsets"][spine_idx + 1][0]
+
+        meshes_points[mesh_start_offset:next_mesh_offset] = geometry.transform_for_spine(
+            spine_rotation,
+            spine_translation,
+            centered_spines_meshes["vertices"][mesh_start_offset:next_mesh_offset],
+        )
+
+        data_table[spine_idx]["afferent_surface_x"] = 0.0
+        data_table[spine_idx]["afferent_surface_y"] = 0.0
+        data_table[spine_idx]["afferent_surface_z"] = 0.0
+
+        data_table[spine_idx]["afferent_center_x"] = data_table[spine_idx]["afferent_surface_x"]
+        data_table[spine_idx]["afferent_center_y"] = data_table[spine_idx]["afferent_surface_y"]
+        data_table[spine_idx]["afferent_center_z"] = data_table[spine_idx]["afferent_surface_z"]
+
+        data_table[spine_idx]["spine_orientation_vector_x"] = 0.0
+        data_table[spine_idx]["spine_orientation_vector_y"] = 1.0
+        data_table[spine_idx]["spine_orientation_vector_z"] = 0.0
+
+        data_table[spine_idx]["spine_rotation_x"] = 0.0
+        data_table[spine_idx]["spine_rotation_y"] = 0.0
+        data_table[spine_idx]["spine_rotation_z"] = 0.0
+        data_table[spine_idx]["spine_rotation_w"] = 1.0
+
+    spines_table = {
+        "spine_table_version": centered_spines_table["spine_table_version"],
+        "spines_table_data": data_table,
+    }
+    spines_skeletons = {
+        ("metadata", "cell_family"): centered_spines_skeletons[("metadata", "cell_family")],
+        ("metadata", "cell_version"): centered_spines_skeletons[("metadata", "cell_version")],
+        "points": skeletons_points,
+        "structure": centered_spines_skeletons["structure"],
+    }
+
+    spines_meshes = {
+        "offsets": centered_spines_meshes["offsets"],
+        "triangles": centered_spines_meshes["triangles"],
+        "vertices": meshes_points,
+    }
+
+    return spines_table, spines_skeletons, spines_meshes
+
+
+def transform_spines_coordinates(
+    centered_spines_tables: dict,
+    centered_spines_skeletons: dict,
+    centered_spines_meshes: dict,
+) -> tuple[dict, dict, dict]:
+    """Transformed centered spines into their global coordinates position.
+
+    This function transforms the corresponding spines tables and spines skeletons so that centered
+    spines become not centered (i.e. placed at their global neuron coordinates).
+    Restriction: spines must be grouped by neuron (grouping by collection is not supported).
+    Therefore, there must be the same number of items and the same keys on both dictionaries.
+
+    Args:
+        centered_spines_tables: Dictionary with the spines tables to be processed, organized by
+        neuron name
+        centered_spines_skeletons: Dictionary with the spines skeletons to be processed, organized
+        by neuron name
+        centered_spines_meshes: Dictionary with the spines meshes to be processed, organized
+        by neuron name
+
+    Returns: The spines tables, skeletons and meshes rotated and translated into their global
+    neuron coordinates
+    """
+    tables_keys = centered_spines_tables.keys()
+    skeletons_keys = centered_spines_skeletons.keys()
+    meshes_keys = centered_spines_meshes.keys()
+    if not (tables_keys == skeletons_keys == meshes_keys):
+        raise ValueError(
+            "Error: spines tables, skeletons and meshes dictionaries must have the same keys"
+        )
+
+    spines_tables = {}
+    spines_skeletons = {}
+    spines_meshes = {}
+
+    for neuron_name in centered_spines_tables.keys():
+        spines_tables[neuron_name], spines_skeletons[neuron_name], spines_meshes[neuron_name] = (
+            transform_spines_coordinates_for_neuron(
+                centered_spines_tables[neuron_name],
+                centered_spines_skeletons[neuron_name],
+                centered_spines_meshes[neuron_name],
+            )
+        )
+
+    return spines_tables, spines_skeletons, spines_meshes

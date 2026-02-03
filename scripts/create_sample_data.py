@@ -23,7 +23,8 @@ def create_sample_data(
     Creates as many neurons as given by parameter and as many spines per neuron or per collection.
     The spines can be grouped by neuron (group_by_neuron=True) or by collection
     (group_by_neuron=False). The parameter num_colls has no effect if spines are grouped by neuron.
-    The spines can be centered at the origin or at its original position.
+    When grouped by neuron, the spines can be centered at the origin or at its original position,
+    according to centered_spines argument. Otherwise, spines must be centered.
 
     Args:
         output_file: Filepath to output file that will be created
@@ -41,20 +42,20 @@ def create_sample_data(
     )
 
     morph_skeletons = morph_creator.generate_neuron_skeletons(neuron_names)
+    morph_meshes = morph_creator.generate_neuron_meshes(morph_skeletons)
     soma_meshes = morph_creator.generate_soma_meshes_arrays(morph_skeletons)
+
     spines_skeletons = spine_creator.generate_all_spines_skeletons(collection_names, num_spines)
+    spines_meshes = spine_creator.generate_all_spines_meshes(spines_skeletons)
+
     spines_tables = spine_creator.generate_spines_tables(
         morph_skeletons, spines_skeletons, group_by_neuron
     )
 
-    morph_meshes = morph_creator.generate_neuron_meshes(morph_skeletons)
-    # FIXME: to be implemented!!
-    # if not centered_spines:
-    #    spines_skeletons = spine_creator.transform_spines_skeletons(
-    #        spines_tables, spines_skeletons
-    #    )
-
-    spines_meshes = spine_creator.generate_all_spines_meshes(spines_skeletons)
+    if not centered_spines:
+        spines_tables, spines_skeletons, spines_meshes = spine_creator.transform_spines_coordinates(
+            spines_tables, spines_skeletons, spines_meshes
+        )
 
     data = {
         "spine_tables": spines_tables,
@@ -100,12 +101,12 @@ def main() -> None:
     parser.add_argument("--by-neuron", action="store_true", help="Group spines by neuron")
     parser.add_argument("--by-collection", action="store_true", help="Group spines by collection")
 
-    # FIXME: Not centered option to be implemented, for now they're always centered
     # Centered spines or not (bool)
-    # parser.add_argument("--centered", action="store_true", help="Create centered spines")
+    parser.add_argument("--centered", action="store_true", help="Create centered spines")
 
     args = parser.parse_args()
 
+    # Argument validation
     if args.by_neuron and args.by_collection:
         raise ValueError("Spines cannot be grouped by neuron and by collection, need to choose one")
 
@@ -115,8 +116,12 @@ def main() -> None:
     if args.by_collection and args.ncolls < 1:
         raise ValueError("There must be at least one collection when grouping spines by collection")
 
-    print("Output file:", args.output)
-    print("Number of neurons:", args.nneurons)
+    if args.by_collection and not args.centered:
+        raise ValueError("Not centered spines can only be grouped by neuron")
+
+    # Print summary
+    print(f"Output file: {args.output}")
+    print(f"Number of neurons: {args.nneurons}")
 
     if not args.by_collection:
         if not args.by_neuron:
@@ -126,21 +131,16 @@ def main() -> None:
         else:
             print("Spines grouped by neuron")
 
-        print("Number of spines per neuron:", args.nspines)
+        print(f"Number of spines per neuron: {args.nspines}")
     else:
         print("Spines grouped by collection")
-        print("Number of spines per collection:", args.nspines)
+        print(f"Number of spines per collection: {args.nspines}")
 
-    print("Number of spine collections:", args.ncolls)
-    print("Spines are centered: True")  # FIXME: To be implemented
+    print(f"Number of spine collections: {args.ncolls}")
+    print(f"Spines are centered: {args.centered}")
 
     create_sample_data(
-        args.output,
-        args.nneurons,
-        args.ncolls,
-        args.nspines,
-        args.by_neuron,
-        True,  # FIXME: args.centered
+        args.output, args.nneurons, args.ncolls, args.nspines, args.by_neuron, args.centered
     )
 
 

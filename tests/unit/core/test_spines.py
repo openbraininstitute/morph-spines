@@ -64,11 +64,8 @@ def test_spine_transformations(spines):
     assert len(transformations[0].as_matrix()) == len(expected_transformations[0])
     assert len(transformations[1]) == len(expected_transformations[1])
 
-    assert np.allclose(
-        transformations[0].as_matrix(),
-        expected_transformations[0],  # , rtol=1e-5, atol=1e-7
-    )
-    assert np.allclose(transformations[1], expected_transformations[1])  # , rtol=1e-6, atol=1e-7)
+    assert np.allclose(transformations[0].as_matrix(), expected_transformations[0])
+    assert np.allclose(transformations[1], expected_transformations[1])
 
 
 def test__transform_spine_skeletons_fail_num_spines(spines):
