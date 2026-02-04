@@ -1,37 +1,19 @@
-from pathlib import Path
-
-import morphio
 import numpy as np
 import pytest
-from neurom.core.morphology import Morphology
+from morphio import PointLevel, SectionType
+from morphio.mut import Morphology
+from neurom.core.morphology import Morphology as neurom_morphology
 from numpy.testing import assert_array_equal
-
-from morph_spines.core.h5_schema import GRP_MORPH
-
-SAMPLE_DATA_DIR = f"{Path(__file__).parent.parent}/data"
-SAMPLE_MORPH_WITH_SPINES_FILE = f"{SAMPLE_DATA_DIR}/morph_with_spines_schema_v1.0.h5"
-MORPH_WITH_SPINES_ID = "neuron_0"
 
 
 @pytest.fixture
-def morphology():
-    """Fixture providing a Morphology instance"""
-    coll = morphio.Collection(SAMPLE_MORPH_WITH_SPINES_FILE)
-    morphology = coll.load(f"{GRP_MORPH}/{MORPH_WITH_SPINES_ID}")
-    return Morphology(morphology, MORPH_WITH_SPINES_ID, process_subtrees=False)
+def morphology_name():
+    return "neuron_0"
 
 
-def test_morphology_name(morphology):
-    assert morphology.name == MORPH_WITH_SPINES_ID
-
-
-def test_morphology_npoints(morphology):
-    expected_morph_npoints = 6
-    assert morphology.to_morphio().n_points == expected_morph_npoints
-
-
-def test_morphology_points(morphology):
-    expected_morph_points = np.array(
+@pytest.fixture
+def morphology_points():
+    return np.array(
         [
             [2.0, 2.0, 2.0, 2.0],
             [3.0, 2.0, 3.0, 2.0],
@@ -42,7 +24,39 @@ def test_morphology_points(morphology):
         ],
         dtype=np.float32,
     )
-    assert_array_equal(morphology.points, expected_morph_points)
+
+
+@pytest.fixture
+def morphology(morphology_name):
+    """Fixture providing a Morphology instance"""
+    # coll = morphio.Collection(SAMPLE_MORPH_WITH_SPINES_FILE)
+    # morphology = coll.load(f"{GRP_MORPH}/{MORPH_WITH_SPINES_ID}")
+    # return Morphology(morphology, MORPH_WITH_SPINES_ID, process_subtrees=False)
+
+    morph = Morphology()
+    morph.soma.points = [[0, 0, 0], [1, 1, 1]]
+    morph.soma.diameters = [1, 1]
+
+    section = morph.append_root_section(
+        PointLevel([[2, 2, 2], [3, 2, 3]], [4, 4]), SectionType.axon
+    )
+    section.append_section(PointLevel([[3, 2, 3], [4, 3, 3]], [4, 4]))
+    section.append_section(PointLevel([[3, 2, 3], [5, 5, 5]], [5, 5]))
+
+    return neurom_morphology(morph.as_immutable(), morphology_name, process_subtrees=False)
+
+
+def test_morphology_name(morphology, morphology_name):
+    assert morphology.name == morphology_name
+
+
+def test_morphology_npoints(morphology):
+    expected_morph_npoints = 6
+    assert morphology.to_morphio().n_points == expected_morph_npoints
+
+
+def test_morphology_points(morphology, morphology_points):
+    assert_array_equal(morphology.points, morphology_points)
 
 
 def test_morphology_section_offsets(morphology):
