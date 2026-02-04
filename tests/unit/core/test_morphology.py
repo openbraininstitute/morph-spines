@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 from morphio import PointLevel, SectionType
 from morphio.mut import Morphology
-from neurom.core.morphology import Morphology as neurom_morphology
+from neurom.core.morphology import Morphology as neuromMorphology
 from numpy.testing import assert_array_equal
 
 
@@ -43,7 +43,7 @@ def morphology(morphology_name):
     section.append_section(PointLevel([[3, 2, 3], [4, 3, 3]], [4, 4]))
     section.append_section(PointLevel([[3, 2, 3], [5, 5, 5]], [5, 5]))
 
-    return neurom_morphology(morph.as_immutable(), morphology_name, process_subtrees=False)
+    return neuromMorphology(morph.as_immutable(), morphology_name, process_subtrees=False)
 
 
 def test_morphology_name(morphology, morphology_name):
