@@ -33,7 +33,7 @@ def spines_collection():
 @pytest.fixture
 def spines_table(num_spines, spines_collection):
     rotation = np.tile(Rotation.identity().as_quat(), (num_spines, 1))
-    translation = np.array([[i, 0.0, 0.0] for i in range(num_spines)])
+    translation = np.tile([0., 0., 0.], (num_spines, 1)).astype(float)
     df = pd.DataFrame(
         {
             COL_SPINE_ID: range(num_spines),
@@ -49,6 +49,15 @@ def spines_table(num_spines, spines_collection):
         }
     )
     return df
+
+
+@pytest.fixture
+def centered_spines_table(spines_table):
+    translation = np.array([[i, 0.0, 0.0] for i in range(len(spines_table))])
+    centered_df = spines_table.copy()
+    centered_df[list(COL_TRANSLATION)] = translation
+
+    return centered_df
 
 
 @pytest.fixture
@@ -85,14 +94,14 @@ def spines_meshes(spines_skeletons):
 
 
 @pytest.fixture
-def centered_spines_meshes(spines_meshes, spines_table):
+def centered_spines_meshes(spines_meshes, centered_spines_table):
     centered_meshes = []
     for idx, mesh in enumerate(spines_meshes):
         centered_spine_mesh = mesh.copy()
         spine_rotation = Rotation.from_quat(
-            np.array(spines_table.loc[idx, COL_ROTATION].to_numpy(dtype=float))
+            np.array(centered_spines_table.loc[idx, COL_ROTATION].to_numpy(dtype=float))
         )
-        spine_translation = spines_table.loc[idx, COL_TRANSLATION].to_numpy(dtype=float)
+        spine_translation = centered_spines_table.loc[idx, COL_TRANSLATION].to_numpy(dtype=float)
         transform_matrix = geometry.inverse_transform_matrix_for_spine(
             spine_rotation, spine_translation
         )
@@ -128,12 +137,12 @@ def spines_with_meshes(spines, spines_meshes):
 
 
 @pytest.fixture
-def centered_spines(spines_filename, spines_collection, spines_table, spines_skeletons):
+def centered_spines(spines_filename, spines_collection, centered_spines_table, spines_skeletons):
     """Fixture providing a Spines instance -- with centered spines, without meshes"""
     return Spines(
         meshes_filepath=spines_filename,
         morphology_name=spines_collection,
-        spine_table=spines_table,
+        spine_table=centered_spines_table,
         centered_spine_skeletons=spines_skeletons,
         spines_are_centered=True,
         spine_meshes=None,
@@ -195,10 +204,39 @@ def test_centered_spine_skeletons(centered_spines, num_spines):
     assert_allclose(spine_skeletons[spine_id].points, expected_points)
 
 
-def test__spine_mesh_points(spines_with_meshes, spines_meshes):
-    spine_id = 0
+def test_spine_mesh_points(spines_with_meshes, spines_meshes):
+    # Not centered spines, must return not centered mesh points (global coordinates)
+    spine_id = 1
     expected_points = spines_meshes[spine_id].vertices
-    points = spines_with_meshes._spine_mesh_points(spine_loc=spine_id, transform=False)
+    points = spines_with_meshes.spine_mesh_points(spine_loc=spine_id)
+
+    assert_array_equal(points, expected_points)
+
+
+def test_spine_mesh_points_centered(centered_spines_with_meshes, spines_meshes):
+    # Centered spines, must return not centered mesh points (global coordinates)
+    spine_id = 1
+    expected_points = spines_meshes[spine_id].vertices
+    points = centered_spines_with_meshes.spine_mesh_points(spine_loc=spine_id)
+
+    assert_array_equal(points, expected_points)
+
+
+def test_centered_mesh_points(spines_with_meshes, spines_meshes):
+    # Not centered spines, must return not centered mesh points (global coordinates),
+    # since the spine table does not specify how to translate points to origin
+    spine_id = 1
+    expected_points = spines_meshes[spine_id].vertices
+    points = spines_with_meshes.centered_mesh_points(spine_loc=spine_id)
+
+    assert_array_equal(points, expected_points)
+
+
+def test_centered_mesh_points_centered(centered_spines_with_meshes, centered_spines_meshes):
+    # Centered spines, must return centered mesh points (local coordinates)
+    spine_id = 1
+    expected_points = centered_spines_meshes[spine_id].vertices
+    points = centered_spines_with_meshes.centered_mesh_points(spine_loc=spine_id)
 
     assert_array_equal(points, expected_points)
 
@@ -212,7 +250,7 @@ def test_spine_mesh_triangles(spines_with_meshes, spines_meshes):
 
 
 def test_spine_mesh(spines_with_meshes, spines_meshes):
-    spine_id = 0
+    spine_id = 1
     mesh = spines_with_meshes.spine_mesh(spine_id)
 
     assert isinstance(mesh, trimesh.Trimesh)
@@ -220,12 +258,30 @@ def test_spine_mesh(spines_with_meshes, spines_meshes):
     assert_array_equal(mesh.faces, spines_meshes[spine_id].faces)
 
 
-def test_centered_spine_mesh(centered_spines_with_meshes, spines_meshes):
-    spine_id = 0
-    mesh = centered_spines_with_meshes.centered_spine_mesh(spine_id)
+def test_spine_mesh_centered(centered_spines_with_meshes, spines_meshes):
+    spine_id = 1
+    mesh = centered_spines_with_meshes.spine_mesh(spine_id)
+
     assert isinstance(mesh, trimesh.Trimesh)
     assert_array_equal(mesh.vertices, spines_meshes[spine_id].vertices)
     assert_array_equal(mesh.faces, spines_meshes[spine_id].faces)
+
+
+def test_centered_spine_mesh(spines_with_meshes, spines_meshes):
+    # Non-centered spines --> non-centered mesh
+    spine_id = 1
+    mesh = spines_with_meshes.centered_spine_mesh(spine_id)
+    assert isinstance(mesh, trimesh.Trimesh)
+    assert_array_equal(mesh.vertices, spines_meshes[spine_id].vertices)
+    assert_array_equal(mesh.faces, spines_meshes[spine_id].faces)
+
+
+def test_centered_spine_mesh_centered(centered_spines_with_meshes, centered_spines_meshes):
+    spine_id = 1
+    mesh = centered_spines_with_meshes.centered_spine_mesh(spine_id)
+    assert isinstance(mesh, trimesh.Trimesh)
+    assert_array_equal(mesh.vertices, centered_spines_meshes[spine_id].vertices)
+    assert_array_equal(mesh.faces, centered_spines_meshes[spine_id].faces)
 
 
 def test_spine_indices_for_section(spines, spines_table):
@@ -302,6 +358,53 @@ def test_centered_spine_meshes_for_section(
     assert len(meshes) == len(section_meshes)
 
     for mesh, expected_mesh in zip(meshes, section_meshes, strict=True):
+        assert isinstance(mesh, trimesh.Trimesh)
+        print(f"mesh: \n{mesh.vertices}, \nexpected_mesh: \n{expected_mesh.vertices}")
+        assert_allclose(mesh.vertices, expected_mesh.vertices)
+        assert_allclose(mesh.faces, expected_mesh.faces)
+
+
+def test_spine_meshes_for_morphology(spines_with_meshes, spines_meshes):
+    morph_meshes = list(spines_with_meshes.spine_meshes_for_morphology())
+
+    assert len(morph_meshes) == len(spines_meshes)
+
+    for mesh, expected_mesh in zip(morph_meshes, spines_meshes, strict=True):
+        assert isinstance(mesh, trimesh.Trimesh)
+        print(f"mesh: \n{mesh.vertices}, \nexpected_mesh: \n{expected_mesh.vertices}")
+        assert_allclose(mesh.vertices, expected_mesh.vertices)
+        assert_allclose(mesh.faces, expected_mesh.faces)
+
+
+def test_compound_spine_meshes_for_morphology(spines_with_meshes, spines_meshes):
+    morph_mesh = spines_with_meshes.compound_spine_meshes_for_morphology()
+    expected_mesh = trimesh.util.concatenate(spines_meshes)
+
+    assert isinstance(morph_mesh, trimesh.Trimesh)
+    assert_allclose(morph_mesh.vertices, expected_mesh.vertices)
+    assert_allclose(morph_mesh.faces, expected_mesh.faces)
+
+
+def test_centered_spine_meshes_for_morphology(spines_with_meshes, spines_meshes):
+    morph_meshes = list(spines_with_meshes.centered_spine_meshes_for_morphology())
+
+    assert len(morph_meshes) == len(spines_meshes)
+
+    for mesh, expected_mesh in zip(morph_meshes, spines_meshes, strict=True):
+        assert isinstance(mesh, trimesh.Trimesh)
+        print(f"mesh: \n{mesh.vertices}, \nexpected_mesh: \n{expected_mesh.vertices}")
+        assert_allclose(mesh.vertices, expected_mesh.vertices)
+        assert_allclose(mesh.faces, expected_mesh.faces)
+
+
+def test_centered_spine_meshes_for_morphology_centered(
+        centered_spines_with_meshes, centered_spines_meshes
+):
+    morph_meshes = list(centered_spines_with_meshes.centered_spine_meshes_for_morphology())
+
+    assert len(morph_meshes) == len(centered_spines_meshes)
+
+    for mesh, expected_mesh in zip(morph_meshes, centered_spines_meshes, strict=True):
         assert isinstance(mesh, trimesh.Trimesh)
         print(f"mesh: \n{mesh.vertices}, \nexpected_mesh: \n{expected_mesh.vertices}")
         assert_allclose(mesh.vertices, expected_mesh.vertices)
