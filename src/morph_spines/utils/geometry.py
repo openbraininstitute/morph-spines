@@ -37,6 +37,6 @@ def inverse_transform_matrix_for_spine(
     """Get the spine inverse transform matrix from the spine table information."""
     transform_matrix = np.eye(4)
     transform_matrix[:3, :3] = spine_rotation.inv().as_matrix()
-    transform_matrix[:3, 3] = -spine_rotation.inv().apply(spine_translation)
+    transform_matrix[:3, 3] = -spine_rotation.inv().apply(spine_translation.copy())
 
     return transform_matrix
