@@ -106,7 +106,9 @@ def generate_spines_table(
     added to the neuron. The spine location is based on the middle point of each neuron's sections.
     If there are more spines than neuron sections, spine locations will be repeated. This is a
     simple strategy to ensure all spines are touching the neuron, to be used only for testing.
-    Assumption: all spines skeletons are centered at the origin and placed upright.
+    Assumptions:
+    1. All spines skeletons are centered at the origin and placed upright.
+    2. Spines have no branching (i.e. len(structure) array == num_spines)
 
     Args:
         neuron_skeleton: Dictionary with the neuron skeleton (metadata + points + structure arrays)
