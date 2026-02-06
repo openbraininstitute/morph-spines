@@ -302,7 +302,8 @@ def load_spine_meshes_for_morphology(
     """
     # If no spine table is given, get the list of the spines belonging to the morphology
     if spine_table is None:
-        spine_table = load_spine_table(filepath, morphology_name)
+        spine_table_path = f"{GRP_EDGES}/{morphology_name}"
+        spine_table = load_spine_table(filepath, spine_table_path)
 
     spines_df = spine_table[[COL_SPINE_ID, COL_SPINE_MORPH]]
 
