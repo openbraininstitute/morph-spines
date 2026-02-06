@@ -33,7 +33,7 @@ def spines_collection():
 @pytest.fixture
 def spines_table(num_spines, spines_collection):
     rotation = np.tile(Rotation.identity().as_quat(), (num_spines, 1))
-    translation = np.tile([0., 0., 0.], (num_spines, 1)).astype(float)
+    translation = np.tile([0.0, 0.0, 0.0], (num_spines, 1)).astype(float)
     df = pd.DataFrame(
         {
             COL_SPINE_ID: range(num_spines),
@@ -398,7 +398,7 @@ def test_centered_spine_meshes_for_morphology(spines_with_meshes, spines_meshes)
 
 
 def test_centered_spine_meshes_for_morphology_centered(
-        centered_spines_with_meshes, centered_spines_meshes
+    centered_spines_with_meshes, centered_spines_meshes
 ):
     morph_meshes = list(centered_spines_with_meshes.centered_spine_meshes_for_morphology())
 
