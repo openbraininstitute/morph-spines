@@ -1,45 +1,77 @@
-from pathlib import Path
+# from pathlib import Path
 
+import h5py
 import numpy as np
 import pytest
+import trimesh
 from numpy.testing import assert_array_equal
 
+from morph_spines.core.h5_schema import (
+    GRP_MESHES,
+    GRP_SOMA,
+    GRP_TRIANGLES,
+    GRP_VERTICES,
+)
 from morph_spines.core.soma import Soma
-
-SAMPLE_DATA_DIR = f"{Path(__file__).parent.parent}/data"
-SAMPLE_MORPH_WITH_SPINES_FILE = f"{SAMPLE_DATA_DIR}/morph_with_spines_schema_v1.0.h5"
-MORPH_WITH_SPINES_ID = "neuron_0"
-EXPECTED_SOMA_VERTICES = np.array(
-    [[0, 0, 1], [1, 0, 0], [0, 1, 0], [-1, 0, 0], [0, -1, 0], [0, 0, -1]]
-)
-EXPECTED_SOMA_TRIANGLES = np.array(
-    [[0, 1, 2], [0, 2, 3], [0, 3, 4], [0, 4, 1], [5, 2, 1], [5, 3, 2], [5, 4, 3], [5, 1, 4]]
-)
 
 
 @pytest.fixture
-def soma():
+def morphology_name():
+    return "neuron_0"
+
+
+@pytest.fixture
+def soma_vertices():
+    return np.array([[0, 0, 1], [1, 0, 0], [0, 1, 0], [-1, 0, 0], [0, -1, 0], [0, 0, -1]])
+
+
+@pytest.fixture
+def soma_triangles():
+    return np.array(
+        [[0, 1, 2], [0, 2, 3], [0, 3, 4], [0, 4, 1], [5, 2, 1], [5, 3, 2], [5, 4, 3], [5, 1, 4]]
+    )
+
+
+@pytest.fixture
+def soma_filename(tmp_path, morphology_name, soma_vertices, soma_triangles):
+    f = tmp_path / "soma_file.h5"
+
+    with h5py.File(f, "w") as h5:
+        soma_grp = h5.create_group(GRP_SOMA)
+        mesh_grp = soma_grp.create_group(GRP_MESHES)
+        morph_grp = mesh_grp.create_group(morphology_name)
+        morph_grp.create_dataset(GRP_VERTICES, data=soma_vertices)
+        morph_grp.create_dataset(GRP_TRIANGLES, data=soma_triangles)
+
+    return f
+
+
+@pytest.fixture
+def soma(soma_filename, morphology_name):
     """Fixture providing a Soma instance"""
-    return Soma(meshes_filepath=SAMPLE_MORPH_WITH_SPINES_FILE, morphology_name=MORPH_WITH_SPINES_ID)
+    return Soma(meshes_filepath=soma_filename, morphology_name=morphology_name)
 
 
-def test_soma_name(soma):
-    assert soma.name == MORPH_WITH_SPINES_ID
+def test_soma_name(soma, morphology_name):
+    assert soma.name == morphology_name
 
 
-def test_soma_center(soma):
-    expected_center = np.array([0.0, 0.0, 0.0])
+def test_soma_center(soma, soma_vertices):
+    expected_center = soma_vertices.mean(axis=0)
     assert_array_equal(soma.center, expected_center)
 
 
-def test_soma_mesh(soma):
-    assert_array_equal(soma.soma_mesh.vertices, EXPECTED_SOMA_VERTICES)
-    assert_array_equal(soma.soma_mesh.faces, EXPECTED_SOMA_TRIANGLES)
+def test_soma_mesh(soma, soma_vertices, soma_triangles):
+    soma_mesh = soma.soma_mesh
+
+    assert isinstance(soma_mesh, trimesh.Trimesh)
+    assert_array_equal(soma_mesh.vertices, soma_vertices)
+    assert_array_equal(soma_mesh.faces, soma_triangles)
 
 
-def test_soma_mesh_points(soma):
-    assert_array_equal(soma.soma_mesh_points, EXPECTED_SOMA_VERTICES)
+def test_soma_mesh_points(soma, soma_vertices):
+    assert_array_equal(soma.soma_mesh_points, soma_vertices)
 
 
-def test_soma_mesh_triangles(soma):
-    assert_array_equal(soma.soma_mesh_triangles, EXPECTED_SOMA_TRIANGLES)
+def test_soma_mesh_triangles(soma, soma_triangles):
+    assert_array_equal(soma.soma_mesh_triangles, soma_triangles)

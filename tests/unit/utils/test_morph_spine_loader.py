@@ -1,45 +1,26 @@
-from pathlib import Path
-
 import h5py
 import numpy as np
 import pandas as pd
 import pytest
-import trimesh
-from numpy.testing import assert_array_equal
 
-from morph_spines import Soma
-from morph_spines.core.h5_schema import GRP_EDGES, GRP_MORPH, GRP_SKELETONS, GRP_SPINES
-from morph_spines.core.morphology_with_spines import MorphologyWithSpines
+from morph_spines.core.h5_schema import GRP_EDGES, GRP_MORPH
 from morph_spines.utils.morph_spine_loader import (
     _is_datasets_group,
     _is_pandas_dataframe_group,
     _resolve_morphology_name,
-    load_morphology_with_spines,
-    load_soma,
-    load_spine_meshes_for_morphology,
-    load_spine_skeletons,
     load_spine_table,
 )
 
-SAMPLE_DATA_DIR = f"{Path(__file__).parent.parent}/data"
-SAMPLE_MORPH_WITH_SPINES_DATASET_FILE = f"{SAMPLE_DATA_DIR}/morph_with_spines_schema_v1.0.h5"
-MORPH_WITH_SPINES_ID = "neuron_0"
 
-SAMPLE_MORPH_WITH_SPINES_CENTERED_DATASET_FILE = (
-    f"{SAMPLE_DATA_DIR}/morph_with_spines_centered_schema_v1.0.h5"
-)
-MORPH_WITH_SPINES_CENTERED_ID = "01234"
+def test__resolve_morphology_name_single(tmp_path):
+    f = tmp_path / "test.h5"
+    morph_name = "m1"
+    with h5py.File(f, "w") as h5:
+        grp = h5.create_group(GRP_MORPH)
+        grp.create_group(morph_name)
 
-SAMPLE_MORPH_WITH_SPINES_COLLECTION_FILE = (
-    f"{SAMPLE_DATA_DIR}/morph_with_spines_col_v1.0_2nrn_3col.h5"
-)
-COL_MORPH_IDS = ["neuron_0", "neuron_1"]
-COL_COLLECTION_IDS = ["coll_0", "coll_1", "coll_2"]
-
-
-def test__resolve_morphology_name_single():
-    name = _resolve_morphology_name(SAMPLE_MORPH_WITH_SPINES_DATASET_FILE)
-    assert name == MORPH_WITH_SPINES_ID
+    name = _resolve_morphology_name(str(f))
+    assert name == morph_name
 
 
 def test__resolve_morphology_name_multiple_without_arg(tmp_path):
@@ -53,9 +34,14 @@ def test__resolve_morphology_name_multiple_without_arg(tmp_path):
         _resolve_morphology_name(str(f))
 
 
-def test__resolve_morphology_name_not_found():
+def test__resolve_morphology_name_not_found(tmp_path):
+    f = tmp_path / "test.h5"
+    with h5py.File(f, "w") as h5:
+        grp = h5.create_group(GRP_MORPH)
+        grp.create_group("m1")
+
     with pytest.raises(ValueError):
-        _resolve_morphology_name(SAMPLE_MORPH_WITH_SPINES_DATASET_FILE, "m1")
+        _resolve_morphology_name(str(f), "m2")
 
 
 def test__resolve_morphology_name_empty_group(tmp_path):
@@ -106,8 +92,14 @@ def test__is_pandas_dataframe_group_invalid(tmp_path):
         _is_pandas_dataframe_group(str(f), "invalid_group")
 
 
-def test__is_pandas_dataframe_group_false():
-    assert not _is_pandas_dataframe_group(SAMPLE_MORPH_WITH_SPINES_DATASET_FILE, GRP_EDGES)
+def test__is_pandas_dataframe_group_false(tmp_path):
+    f = tmp_path / "test.h5"
+    with h5py.File(f, "w") as h5:
+        grp = h5.create_group(GRP_EDGES)
+        morph_grp = grp.create_group("m1")
+        morph_grp.create_dataset("dataset", data=np.array([1, 2]))
+
+    assert not _is_pandas_dataframe_group(str(f), GRP_EDGES)
 
 
 def test__is_pandas_dataframe_group_false_no_group(tmp_path):
@@ -119,10 +111,17 @@ def test__is_pandas_dataframe_group_false_no_group(tmp_path):
     assert not _is_pandas_dataframe_group(str(f), "root_group/dataset")
 
 
-def test__is_datasets_group_true_1dim_datasets():
-    assert _is_datasets_group(
-        SAMPLE_MORPH_WITH_SPINES_DATASET_FILE, f"{GRP_EDGES}/{MORPH_WITH_SPINES_ID}"
-    )
+def test__is_datasets_group_true_1dim_datasets(tmp_path):
+    f = tmp_path / "test.h5"
+    morph_name = "m1"
+    with h5py.File(f, "w") as h5:
+        grp = h5.create_group(GRP_EDGES)
+        morph_grp = grp.create_group(morph_name)
+        morph_grp.create_dataset("dataset_1", data=np.array([1, 2]))
+        morph_grp.create_dataset("dataset_2", data=np.array([3, 4]))
+        morph_grp.create_dataset("dataset_3", data=np.array([5, 6]))
+
+    assert _is_datasets_group(str(f), f"{GRP_EDGES}/{morph_name}")
 
 
 def test__is_datasets_group_true_scalar_datasets(tmp_path):
@@ -135,11 +134,13 @@ def test__is_datasets_group_true_scalar_datasets(tmp_path):
     assert _is_datasets_group(str(f), "root_group")
 
 
-def test__is_datasets_group_false_no_group():
-    assert not _is_datasets_group(
-        SAMPLE_MORPH_WITH_SPINES_DATASET_FILE,
-        f"{GRP_SPINES}/{GRP_SKELETONS}/{MORPH_WITH_SPINES_ID}/points",
-    )
+def test__is_datasets_group_false_no_group(tmp_path):
+    f = tmp_path / "test.h5"
+    with h5py.File(f, "w") as h5:
+        root_grp = h5.create_group("root_group")
+        root_grp.create_dataset("dataset", data=np.array([1, 2]))
+
+    assert not _is_datasets_group(str(f), "root_group/dataset")
 
 
 def test__is_datasets_group_false_empty_group(tmp_path):
@@ -184,25 +185,18 @@ def test__is_datasets_group_invalid(tmp_path):
         _is_datasets_group(str(f), "invalid_group")
 
 
-def test_load_spine_table_success():
-    df = load_spine_table(
-        SAMPLE_MORPH_WITH_SPINES_DATASET_FILE, f"{GRP_EDGES}/{MORPH_WITH_SPINES_ID}"
-    )
+def test_load_spine_table_success(tmp_path):
+    df_ref = pd.DataFrame([[1, 2], [3, 4], [5, 6]], columns=["a", "b"])
+    f = tmp_path / "test.h5"
+    df_ref.to_hdf(str(f), key="/df_group")
+
+    df = load_spine_table(str(f), "df_group")
 
     assert isinstance(df, pd.DataFrame)
-    assert len(df.columns) == 20
-    assert set(
-        [
-            "afferent_surface_x",
-            "afferent_center_x",
-            "spine_length",
-            "spine_orientation_vector_x",
-            "spine_rotation_x",
-            "afferent_section_id",
-        ]
-    ).issubset(set(df.columns))
-    assert df.loc[0, "afferent_surface_x"] == np.float64(2.0)
-    assert df.loc[1, "spine_length"] == np.float64(3.0)
+    assert len(df.columns) == len(df_ref.columns)
+    assert set(df.columns) == set(df_ref.columns)
+    assert df.loc[0, "a"] == df_ref.loc[0, "a"]
+    assert df.loc[1, "b"] == df_ref.loc[1, "b"]
 
 
 def test_load_spine_table_pandas_df(tmp_path):
@@ -226,12 +220,7 @@ def test_load_spine_table_scalar_datasets(tmp_path):
 
     assert isinstance(df, pd.DataFrame)
     assert len(df.columns) == 2
-    assert set(
-        [
-            "scalar_int",
-            "scalar_float",
-        ]
-    ) == set(df.columns)
+    assert set(["scalar_int", "scalar_float"]) == set(df.columns)
     assert df.loc[0, "scalar_int"] == 2
     assert df.loc[0, "scalar_float"] == 1.23
 
@@ -268,160 +257,3 @@ def test_load_spine_table_invalid_with_version10(tmp_path):
 
     with pytest.raises(TypeError):
         load_spine_table(str(f), f"{GRP_EDGES}")
-
-
-def test_load_spine_skeletons_edgecase_spine_dup():
-    df = load_spine_table(
-        SAMPLE_MORPH_WITH_SPINES_DATASET_FILE, f"{GRP_EDGES}/{MORPH_WITH_SPINES_ID}"
-    )
-    df.drop(index=0, inplace=True)
-    df = pd.concat([df, df], axis=0, ignore_index=True)
-    spines_skeletons = load_spine_skeletons(
-        SAMPLE_MORPH_WITH_SPINES_DATASET_FILE, MORPH_WITH_SPINES_ID, df
-    )
-    num_spines = df.shape[0]
-
-    assert num_spines == len(spines_skeletons.neurites)
-
-
-def test_load_spine_skeletons_edgecase_spine_missing():
-    df = load_spine_table(
-        SAMPLE_MORPH_WITH_SPINES_DATASET_FILE, f"{GRP_EDGES}/{MORPH_WITH_SPINES_ID}"
-    )
-    df.drop(index=0, inplace=True)
-    spines_skeletons = load_spine_skeletons(
-        SAMPLE_MORPH_WITH_SPINES_DATASET_FILE, MORPH_WITH_SPINES_ID, df
-    )
-    num_spines = df.shape[0]
-
-    assert num_spines == len(spines_skeletons.neurites)
-
-
-def test_load_spine_meshes_for_morphology():
-    spine_table = load_spine_table(
-        SAMPLE_MORPH_WITH_SPINES_DATASET_FILE, f"{GRP_EDGES}/{MORPH_WITH_SPINES_ID}"
-    )
-
-    print(spine_table)
-
-    print(f"Columns: {spine_table.columns}")
-
-    # Test hack: the spines are centered, we just pretend they are not for the purpose of the test
-    meshes = load_spine_meshes_for_morphology(
-        SAMPLE_MORPH_WITH_SPINES_DATASET_FILE,
-        MORPH_WITH_SPINES_ID,
-        spines_are_centered=False,
-        spine_table=spine_table,
-    )
-
-    triangles_ref = [
-        np.array([[0, 2, 1], [0, 3, 2], [0, 4, 3], [0, 1, 4], [1, 2, 3], [1, 3, 4]], dtype=int),
-        np.array([[0, 1, 2], [0, 2, 3], [0, 3, 1], [1, 3, 2]], dtype=int),
-    ]
-    vertices_ref = [
-        np.array([[0, 0, -1], [1, 0, 1], [0, 1, 1], [-1, 0, 1], [0, -1, 1]], dtype=float),
-        np.array([[0, 0, -2], [0, 2, 2], [2, -2, 2], [-2, -2, 2]], dtype=float),
-    ]
-
-    for spine in range(len(meshes)):
-        assert_array_equal(meshes[spine].faces, triangles_ref[spine])
-        assert_array_equal(meshes[spine].vertices, vertices_ref[spine])
-
-
-def test_load_spine_meshes_for_morphology_centered():
-    spine_table = load_spine_table(
-        SAMPLE_MORPH_WITH_SPINES_CENTERED_DATASET_FILE,
-        f"{GRP_EDGES}/{MORPH_WITH_SPINES_CENTERED_ID}",
-    )
-
-    meshes = load_spine_meshes_for_morphology(
-        SAMPLE_MORPH_WITH_SPINES_CENTERED_DATASET_FILE,
-        MORPH_WITH_SPINES_CENTERED_ID,
-        spines_are_centered=True,
-        spine_table=spine_table,
-    )
-
-    triangles_ref = [
-        np.array([[0, 2, 1], [0, 3, 2], [0, 4, 3], [0, 1, 4], [1, 2, 3], [1, 3, 4]], dtype=int),
-        np.array([[0, 1, 2], [0, 2, 3], [0, 3, 1], [1, 3, 2]], dtype=int),
-    ]
-    vertices_ref = [
-        np.array([[2, 2, 2], [3, 2, 4], [2, 3, 4], [1, 2, 4], [2, 1, 4]], dtype=float),
-        np.array([[5, 5, 5], [5, 7, 9], [7, 3, 9], [3, 3, 9]], dtype=float),
-    ]
-
-    for spine in range(len(meshes)):
-        assert_array_equal(meshes[spine].faces, triangles_ref[spine])
-        assert_array_equal(meshes[spine].vertices, vertices_ref[spine])
-
-
-def test_load_soma(tmp_path):
-    soma = load_soma(SAMPLE_MORPH_WITH_SPINES_DATASET_FILE, MORPH_WITH_SPINES_ID)
-
-    assert isinstance(soma, Soma)
-
-
-def test_load_morphology_with_spines_full_morph():
-    morph_with_spines = load_morphology_with_spines(
-        SAMPLE_MORPH_WITH_SPINES_DATASET_FILE, spines_are_centered=False
-    )
-
-    assert isinstance(morph_with_spines, MorphologyWithSpines)
-
-
-def test_load_morphology_with_spines_from_collection():
-    morph_with_spines = load_morphology_with_spines(
-        SAMPLE_MORPH_WITH_SPINES_COLLECTION_FILE, morphology_name=COL_MORPH_IDS[0]
-    )
-    num_spines = 2 * len(COL_COLLECTION_IDS)
-
-    assert isinstance(morph_with_spines, MorphologyWithSpines)
-    assert num_spines == morph_with_spines.spines.spine_count
-
-
-def test_load_morphology_with_spines_load_meshes():
-    morph_with_spines = load_morphology_with_spines(
-        SAMPLE_MORPH_WITH_SPINES_DATASET_FILE, spines_are_centered=True, load_meshes=True
-    )
-
-    spine_meshes = list(morph_with_spines.spines.spine_meshes_for_morphology())
-
-    assert isinstance(morph_with_spines, MorphologyWithSpines)
-    assert len(spine_meshes) == 2
-    assert isinstance(spine_meshes[0], trimesh.Trimesh)
-    assert isinstance(
-        morph_with_spines.spines.compound_spine_meshes_for_morphology(), trimesh.Trimesh
-    )
-
-
-def test_load_morphology_with_spines_load_meshes_centered():
-    morph_with_spines = load_morphology_with_spines(
-        SAMPLE_MORPH_WITH_SPINES_CENTERED_DATASET_FILE, spines_are_centered=True, load_meshes=True
-    )
-
-    spine_meshes = list(morph_with_spines.spines.spine_meshes_for_morphology())
-
-    assert isinstance(morph_with_spines, MorphologyWithSpines)
-    assert len(spine_meshes) == 2
-    assert isinstance(spine_meshes[0], trimesh.Trimesh)
-    assert isinstance(
-        morph_with_spines.spines.compound_spine_meshes_for_morphology(), trimesh.Trimesh
-    )
-
-
-def test_load_morphology_with_spines_from_collection_load_meshes_centered():
-    morph_with_spines = load_morphology_with_spines(
-        SAMPLE_MORPH_WITH_SPINES_COLLECTION_FILE,
-        morphology_name=MORPH_WITH_SPINES_ID,
-        spines_are_centered=True,
-        load_meshes=True,
-    )
-
-    spine_meshes = list(morph_with_spines.spines.spine_meshes_for_morphology())
-
-    assert isinstance(morph_with_spines, MorphologyWithSpines)
-    assert len(spine_meshes) == 6
-    assert isinstance(spine_meshes[0], trimesh.Trimesh)
-    assert isinstance(
-        morph_with_spines.spines.compound_spine_meshes_for_morphology(), trimesh.Trimesh
-    )

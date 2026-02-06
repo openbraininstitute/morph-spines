@@ -158,10 +158,7 @@ class Spines:
         The triangles (i.e., faces) of the meshes describing the shape of
         individual spines.
         """
-        if len(self._spine_meshes) != 0:
-            triangles = self._spine_meshes[spine_loc].faces
-
-        else:
+        if len(self._spine_meshes) == 0:
             spine_row = self.spine_table.loc[spine_loc]
             spine_mesh_grp = spine_row[COL_SPINE_MORPH]
             spine_idx = int(spine_row[COL_SPINE_ID])
@@ -169,6 +166,8 @@ class Spines:
                 group = h5_file[GRP_SPINES][GRP_MESHES][spine_mesh_grp]
                 triangle_start, triangle_end = group[GRP_OFFSETS][spine_idx : spine_idx + 2, 1]
                 triangles = group[GRP_TRIANGLES][triangle_start:triangle_end].astype(int)
+        else:
+            triangles = self._spine_meshes[spine_loc].faces
 
         return triangles
 
@@ -194,13 +193,14 @@ class Spines:
         Returns the mesh (as a trimesh.Trimesh) of an individual spine.
         In global neuron coordinates.
         """
-        if len(self._spine_meshes) != 0:
-            spine_mesh = self._spine_meshes[spine_loc]
-        else:
+        if len(self._spine_meshes) == 0:
             spine_mesh = trimesh.Trimesh(
                 vertices=self.spine_mesh_points(spine_loc),
                 faces=self.spine_mesh_triangles(spine_loc),
             )
+        else:
+            spine_mesh = self._spine_meshes[spine_loc]
+
         return spine_mesh
 
     def centered_spine_mesh(self, spine_loc: int) -> trimesh.Trimesh:
@@ -275,9 +275,10 @@ class Spines:
         """
         # If meshes are not loaded, load them now
         if len(self._spine_meshes) == 0:
-            self._spine_meshes = []
+            spine_meshes = []
             for spine_loc in range(len(self.spine_table)):
-                self._spine_meshes.append(self.spine_mesh(spine_loc))
+                spine_meshes.append(self.spine_mesh(spine_loc))
+            self._spine_meshes = spine_meshes
 
         yield from self._spine_meshes
 
@@ -298,9 +299,10 @@ class Spines:
         """
         # If meshes are not loaded, load them now
         if len(self._spine_meshes) == 0:
-            self._spine_meshes = []
+            spine_meshes = []
             for spine_loc in range(len(self.spine_table)):
-                self._spine_meshes.append(self.spine_mesh(spine_loc))
+                spine_meshes.append(self.spine_mesh(spine_loc))
+            self._spine_meshes = spine_meshes
 
         for spine_idx in range(self.spine_count):
             yield self.centered_spine_mesh(spine_idx)
