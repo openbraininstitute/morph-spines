@@ -84,6 +84,8 @@ Additionally, we can have the following columns as optional:
 
 - `spine_volume`: Spine's head volume (type: float)
 - `spine_neck_diameter`: Spine's neck diameter (type: float)
+- `spine_type`: Spine morphological type classification (type: string). Valid values are:
+  `undefined`, `thin`, `long_thin`, `mushroom`, `stubby`, `filopodium`, `branched`, 
 
 The presence of the spines table is mandatory.
 
@@ -191,7 +193,41 @@ spine_vertices = neuron_vertices[neuron_offsets[IDS]:neuron_offsets[IDS+1]]
 spine_triangles = neuron_triangles[neuron_offsets[IDS]:neuron_offsets[IDS+1]]
 ```
 
-The presence of spine meshes datasets (`vertices`, `/triangles` and `/offsets`) is optional.
+#### Head/neck triangle classification (optional)
+
+The `/head_neck_values` dataset together with an additional column in the `/offsets` dataset
+provide an optional classification of each spine's mesh triangles into head and neck regions.
+Within each spine's triangle range, triangles are assumed to be sorted: all neck triangles first,
+then all head triangles. For branched spines with multiple heads, each head's triangles are
+grouped contiguously and appear in order (head 0, head 1, ...) after all the neck triangles.
+
+This uses the same double-index approach as vertices and triangles: the `/head_neck_values`
+dataset is a flat 1D array containing all head/neck offset values concatenated across all spines.
+Column 2 of the `/offsets` dataset indexes into `/head_neck_values` per spine, so for spine `IDS`:
+
+```python
+hn_start = offsets[IDS, 2]
+hn_end = offsets[IDS+1, 2]
+spine_hn_offsets = head_neck_values[hn_start:hn_end]
+```
+
+The resulting `spine_hn_offsets` is an offset-style array of `H + 1` entries for a spine with `H`
+heads, where all indices are local to the spine's own triangle range:
+
+- Neck triangles: `spine_triangles[0 : spine_hn_offsets[0]]`
+- Head N triangles: `spine_triangles[spine_hn_offsets[N] : spine_hn_offsets[N+1]]`
+- `spine_hn_offsets[H]` equals the total number of triangles for that spine.
+
+For spines without head/neck classification, the consecutive offsets in column 2 are equal
+(`offsets[IDS, 2] == offsets[IDS+1, 2]`), resulting in an empty slice. In this case, all
+triangles are considered undefined and are always returned regardless of filtering options.
+
+For backward compatibility with older files: if the `/head_neck_values` dataset is not present
+or the `/offsets` dataset has only 2 columns (vertices, triangles), all triangles are considered
+undefined.
+
+The presence of spine meshes datasets (`vertices`, `/triangles`, `/offsets` and
+`/head_neck_values`) is optional.
 
 ### `/spines/skeletons` subgroup
 
