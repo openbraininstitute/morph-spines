@@ -19,14 +19,20 @@ from morph_spines.core.h5_schema import (
     COL_ROTATION,
     COL_SPINE_ID,
     COL_SPINE_MORPH,
+    COL_SPINE_TYPE,
     COL_TRANSLATION,
+    GRP_HEAD_NECK_VALUES,
     GRP_MESHES,
     GRP_OFFSETS,
     GRP_SPINES,
     GRP_TRIANGLES,
     GRP_VERTICES,
+    OFF_COL_HEAD_NECK,
+    OFF_COL_TRIANGLES,
+    OFF_COL_VERTICES,
 )
-from morph_spines.utils import geometry
+from morph_spines.utils import geometry, mesh
+from morph_spines.core.spine_type import SpineType
 
 
 class Spines:
@@ -40,6 +46,7 @@ class Spines:
         centered_spine_skeletons: Morphology,
         spines_are_centered: bool = True,
         spine_meshes: list[trimesh.Trimesh] | None = None,
+        head_neck_offsets: list[NDArray] | None = None,
     ) -> None:
         """Default constructor.
 
@@ -50,7 +57,27 @@ class Spines:
         self.spine_table = spine_table
         self._centered_spine_skeletons = centered_spine_skeletons
         self._spines_are_centered = spines_are_centered
+
+        self._valid_head_neck_offsets = True
+
+        if spine_meshes is not None and head_neck_offsets is None:
+            print(
+                "WARNING: no head_neck_offsets provided, spine head/neck classification won't be "
+                "available"
+            )
+            self._valid_head_neck_offsets = False
+
         self._spine_meshes = spine_meshes if spine_meshes is not None else []
+        self._head_neck_offsets = head_neck_offsets if head_neck_offsets is not None else []
+
+        if head_neck_offsets is not None and spine_meshes is None:
+            print(
+                "WARNING: head_neck_offsets value will be ignored because spine_meshes were not"
+                " provided",
+            )
+            self._head_neck_offsets = []
+
+        self._head_neck_offsets_checked = len(self._head_neck_offsets) > 0
 
         if self._spines_are_centered:
             self._spine_skeletons = self._transform_spine_skeletons()
@@ -61,6 +88,17 @@ class Spines:
     def spine_count(self) -> int:
         """Number of spines on morphology."""
         return len(self.spine_table)
+
+    def spine_type(self, spine_loc: int) -> SpineType:
+        """Morphological type of a spine.
+
+        Returns the spine type classification for the given spine. If the
+        spine table does not contain a spine_type column, returns
+        SpineType.UNDEFINED.
+        """
+        if COL_SPINE_TYPE not in self.spine_table.columns:
+            return SpineType.UNDEFINED
+        return SpineType(self.spine_table.loc[spine_loc, COL_SPINE_TYPE])
 
     def spine_transformations(self, spine_loc: int) -> tuple[Rotation, NDArray]:
         """Spine coordinate system transformations.
@@ -141,7 +179,9 @@ class Spines:
             spine_idx = int(spine_row[COL_SPINE_ID])
             with h5py.File(self._filepath, "r") as h5_file:
                 group = h5_file[GRP_SPINES][GRP_MESHES][spine_mesh_grp]
-                vertex_start, vertex_end = group[GRP_OFFSETS][spine_idx : spine_idx + 2, 0]
+                vertex_start, vertex_end = group[GRP_OFFSETS][
+                    spine_idx : spine_idx + 2, OFF_COL_VERTICES
+                ]
                 spine_points = group[GRP_VERTICES][vertex_start:vertex_end].astype(float)
 
             if transform:
@@ -164,7 +204,9 @@ class Spines:
             spine_idx = int(spine_row[COL_SPINE_ID])
             with h5py.File(self._filepath, "r") as h5_file:
                 group = h5_file[GRP_SPINES][GRP_MESHES][spine_mesh_grp]
-                triangle_start, triangle_end = group[GRP_OFFSETS][spine_idx : spine_idx + 2, 1]
+                triangle_start, triangle_end = group[GRP_OFFSETS][
+                    spine_idx : spine_idx + 2, OFF_COL_TRIANGLES
+                ]
                 triangles = group[GRP_TRIANGLES][triangle_start:triangle_end].astype(int)
         else:
             triangles = self._spine_meshes[spine_loc].faces
@@ -187,36 +229,131 @@ class Spines:
         """
         return self._spine_mesh_points(spine_loc, transform=False)
 
-    def spine_mesh(self, spine_loc: int) -> trimesh.Trimesh:
+    def _get_head_neck_offsets(self, spine_loc: int) -> NDArray:
+        """Get the head/neck triangle offsets for a spine.
+
+        Returns:
+        - If no head/neck information is found:
+          Returns an empty array
+
+        - Otherwise:
+          Returns an offset-style array of length H + 1 for a spine with H heads:
+          - Neck triangles: triangles[0 : offsets[0]]
+          - N-th head: triangles[offsets[N] : offsets[N+1]]
+          - total number of spine triangles: offsets[H]
+
+        The head/neck data is stored using a double-index approach: a flat
+        head_neck_values dataset holds all offsets concatenated, and
+        column 2 of the offsets dataset indexes into it per spine.
+        """
+        # Use cached offsets if available
+        if len(self._head_neck_offsets) != 0:
+            return self._head_neck_offsets[spine_loc]
+
+        # Already checked the file and found no offsets
+        if not self._valid_head_neck_offsets:
+            return np.array([], dtype=int)
+
+        spine_row = self.spine_table.loc[spine_loc]
+        spine_mesh_grp = spine_row[COL_SPINE_MORPH]
+        spine_idx = int(spine_row[COL_SPINE_ID])
+
+        with h5py.File(self._filepath, "r") as h5_file:
+            group = h5_file[GRP_SPINES][GRP_MESHES][spine_mesh_grp]
+            offsets_ds = group[GRP_OFFSETS]
+
+            # Old files with only 2 columns (vertices, triangles) have no head/neck classification
+            if GRP_HEAD_NECK_VALUES not in group or offsets_ds.shape[1] < 3:
+                self._valid_head_neck_offsets = False
+                return np.array([], dtype=int)
+
+            hn_start, hn_end = offsets_ds[spine_idx : spine_idx + 2, OFF_COL_HEAD_NECK]
+            # Head/neck classification present in the file, but undefined for this spine
+            if hn_start == hn_end:
+                return np.array([], dtype=int)
+
+            return np.array(group[GRP_HEAD_NECK_VALUES][hn_start:hn_end], dtype=int)
+
+    def spine_mesh(
+        self,
+        spine_loc: int,
+        *,
+        include_head: bool = True,
+        include_neck: bool = True,
+    ) -> trimesh.Trimesh:
         """Spine mesh representation - global.
 
         Returns the mesh (as a trimesh.Trimesh) of an individual spine.
         In global neuron coordinates.
+
+        Args:
+            spine_loc: Spine index in the spine table.
+            include_head: If False, head triangles are excluded. Default True.
+            include_neck: If False, neck triangles are excluded. Default True.
+
+        Returns: trimesh.Trimesh of the spine mesh.
+
+        Raises:
+            ValueError: If both include_head and include_neck are False.
         """
-        if len(self._spine_meshes) == 0:
-            spine_mesh = trimesh.Trimesh(
-                vertices=self.spine_mesh_points(spine_loc),
-                faces=self.spine_mesh_triangles(spine_loc),
+        if not include_head and not include_neck:
+            raise ValueError("At least one of include_head or include_neck must be True")
+
+        # When both flags are True and meshes are preloaded, return directly
+        if include_head and include_neck and len(self._spine_meshes) != 0:
+            return self._spine_meshes[spine_loc]
+
+        vertices = self.spine_mesh_points(spine_loc)
+        triangles = self.spine_mesh_triangles(spine_loc)
+
+        # We load & cache the whole spine mesh, needs splitting if head or neck need to be skipped
+        if not include_head or not include_neck:
+            head_neck_offsets = self._get_head_neck_offsets(spine_loc)
+            filtered = mesh.filter_triangles_by_head_neck(
+                triangles, head_neck_offsets, include_head, include_neck
             )
-        else:
-            spine_mesh = self._spine_meshes[spine_loc]
+            triangles = np.concatenate(filtered) if filtered else np.empty((0, 3), dtype=int)
+            vertices, triangles = mesh.submesh(vertices, triangles)
 
-        return spine_mesh
+        return trimesh.Trimesh(vertices=vertices, faces=triangles)
 
-    def centered_spine_mesh(self, spine_loc: int) -> trimesh.Trimesh:
+    def centered_spine_mesh(
+        self,
+        spine_loc: int,
+        *,
+        include_head: bool = True,
+        include_neck: bool = True,
+    ) -> trimesh.Trimesh:
         """Spine mesh representation - local.
 
         Returns the mesh (as a trimesh.Trimesh) of an individual spine.
         In local spine coordinates.
+
+        Args:
+            spine_loc: Spine index in the spine table.
+            include_head: If False, head triangles are excluded. Default True.
+            include_neck: If False, neck triangles are excluded. Default True.
+
+        Returns: trimesh.Trimesh of the spine mesh in local coordinates.
+
+        Raises:
+            ValueError: If both include_head and include_neck are False.
         """
+        if not include_head and not include_neck:
+            raise ValueError("At least one of include_head or include_neck must be True")
+
         # Even if meshes are loaded, they're in global coordinates, so we need to transform the
         # points into local coordinates before creating a new mesh.
         # However, there's an exception to this case: when the initial H5 data is not centered, in
         # which case centered data equals the non-centered H5 data.
         if not self._spines_are_centered:
-            centered_spine_mesh = self.spine_mesh(spine_loc)
+            centered_spine_mesh = self.spine_mesh(
+                spine_loc, include_head=include_head, include_neck=include_neck
+            )
         else:
-            centered_spine_mesh = self.spine_mesh(spine_loc).copy()
+            centered_spine_mesh = self.spine_mesh(
+                spine_loc, include_head=include_head, include_neck=include_neck
+            ).copy()
             spine_rotation, spine_translation = self.spine_transformations(spine_loc)
             transform_matrix = geometry.inverse_transform_matrix_for_spine(
                 spine_rotation, spine_translation
@@ -266,6 +403,18 @@ class Spines:
         for spine_idx in self.spine_indices_for_section(section_id):
             yield self.centered_spine_mesh(spine_idx)
 
+    def _load_meshes(self) -> None:
+        """Load spine meshes and cache them in memory."""
+        spine_meshes = []
+        head_neck_offsets = []
+
+        for spine_loc in range(len(self.spine_table)):
+            spine_meshes.append(self.spine_mesh(spine_loc))
+            head_neck_offsets.append(self._get_head_neck_offsets(spine_loc))
+
+        self._spine_meshes = spine_meshes
+        self._head_neck_offsets = head_neck_offsets
+
     def spine_meshes_for_morphology(self) -> Iterator[trimesh.Trimesh]:
         """Return all the spine meshes of the morphology.
 
@@ -275,10 +424,7 @@ class Spines:
         """
         # If meshes are not loaded, load them now
         if len(self._spine_meshes) == 0:
-            spine_meshes = []
-            for spine_loc in range(len(self.spine_table)):
-                spine_meshes.append(self.spine_mesh(spine_loc))
-            self._spine_meshes = spine_meshes
+            self._load_meshes()
 
         yield from self._spine_meshes
 
@@ -299,10 +445,7 @@ class Spines:
         """
         # If meshes are not loaded, load them now
         if len(self._spine_meshes) == 0:
-            spine_meshes = []
-            for spine_loc in range(len(self.spine_table)):
-                spine_meshes.append(self.spine_mesh(spine_loc))
-            self._spine_meshes = spine_meshes
+            self._load_meshes()
 
         for spine_idx in range(self.spine_count):
             yield self.centered_spine_mesh(spine_idx)
