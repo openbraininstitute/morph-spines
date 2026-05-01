@@ -31,8 +31,8 @@ from morph_spines.core.h5_schema import (
     OFF_COL_TRIANGLES,
     OFF_COL_VERTICES,
 )
-from morph_spines.utils import geometry, mesh
 from morph_spines.core.spine_type import SpineType
+from morph_spines.utils import geometry, mesh
 
 
 class Spines:
