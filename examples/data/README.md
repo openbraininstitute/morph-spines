@@ -211,12 +211,16 @@ hn_end = offsets[IDS+1, 2]
 spine_hn_offsets = head_neck_values[hn_start:hn_end]
 ```
 
-The resulting `spine_hn_offsets` is an offset-style array of `H + 1` entries for a spine with `H`
+The resulting `spine_hn_offsets` is an offset-style array of `H + 2` entries for a spine with `H`
 heads, where all indices are local to the spine's own triangle range:
 
-- Neck triangles: `spine_triangles[0 : spine_hn_offsets[0]]`
-- Head N triangles: `spine_triangles[spine_hn_offsets[N] : spine_hn_offsets[N+1]]`
-- `spine_hn_offsets[H]` equals the total number of triangles for that spine.
+- Undefined triangles: `spine_triangles[0 : spine_hn_offsets[0]]`
+- Neck triangles: `spine_triangles[spine_hn_offsets[0] : spine_hn_offsets[1]]`
+- Head N triangles: `spine_triangles[spine_hn_offsets[N+1] : spine_hn_offsets[N+2]]`
+- `spine_hn_offsets[-1]` equals the total number of triangles for that spine.
+
+Undefined triangles are always returned regardless of filtering options. For the common case
+where all triangles are classified, `spine_hn_offsets[0]` is simply `0`.
 
 For spines without head/neck classification, the consecutive offsets in column 2 are equal
 (`offsets[IDS, 2] == offsets[IDS+1, 2]`), resulting in an empty slice. In this case, all

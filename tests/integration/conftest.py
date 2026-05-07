@@ -51,3 +51,8 @@ def multiple_collections_moprh_ids():
 @pytest.fixture(scope="session")
 def multiple_collections_coll_ids():
     return ["collection_0", "collection_1", "collection_2"]
+
+
+@pytest.fixture(scope="session")
+def single_morph_spines_head_neck_file(test_data_dir):
+    return test_data_dir / "single_neuron_spines_head_neck.h5"

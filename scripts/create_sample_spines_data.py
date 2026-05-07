@@ -84,17 +84,24 @@ meshes_library = {
     ],
     ("prism", "triangles"): [
         [0, 1, 2],
-        [3, 5, 4],
         [0, 4, 1],
-        [0, 3, 4],
         [1, 5, 2],
-        [1, 4, 5],
         [2, 3, 0],
+        [3, 5, 4],
+        [0, 3, 4],
+        [1, 4, 5],
         [2, 5, 3],
     ],
 }
 
 mesh_library_shapes_and_offsets = {"tetrahedron": (4, 4), "pyramid": (5, 6), "prism": (6, 8)}
+
+# Head/neck split: number of neck triangles per shape.
+# Triangles are ordered neck-first, head-last in the library.
+# - tetrahedron: 3 sides (neck) + 1 base (head)
+# - pyramid: 4 sides (neck) + 2 base (head)
+# - prism: 4 (bottom + its adjacent sides = neck) + 4 (top + its adjacent sides = head)
+mesh_library_head_neck_split = {"tetrahedron": 3, "pyramid": 4, "prism": 4}
 
 
 def generate_spines_table(
@@ -287,23 +294,31 @@ def generate_spines_meshes(shape: str, spines_skeletons: dict[str, NDArray]) -> 
 
     In order to make it simple, only the start and end point of each spine is considered. The
     created mesh is based on a mesh library with tetrahedron, pyramid and prism shapes.
+    Head/neck classification is generated based on the mesh geometry: side triangles
+    connecting the tip to the base are neck, base/top triangles are head.
 
     Args:
         shape: A string describing the shape of the mesh. Possible values are: tetrahedron, pyramid
         and prism
         spines_skeletons: A dictionary containing the spines skeletons (points and structure arrays)
 
-    Returns: A dictionary with the spines meshes (offsets + points + vertices arrays)
+    Returns: A dictionary with the spines meshes (offsets + vertices + triangles +
+    head_neck_values arrays)
     """
     points = spines_skeletons["points"]
     structure = spines_skeletons["structure"]
     num_spines = len(structure)
 
     all_vertices = []
-    # Offset format: [vertices_offset, triangles_offset]
-    all_offsets = [[0, 0]]
+    # Offset format: [vertices_offset, triangles_offset, head_neck_values_offset]
+    all_offsets = [[0, 0, 0]]
     # Shape = {geometry: (vertices_offset, triangles_offset)}
     shape_offsets = mesh_library_shapes_and_offsets[shape]
+    neck_split = mesh_library_head_neck_split[shape]
+
+    # Head/neck values: for each spine, [undefined_end, neck_end, total]
+    # No undefined triangles, so undefined_end = 0
+    all_head_neck_values = []
 
     for spine_idx in range(num_spines):
         first_pt = structure[spine_idx, 0]
@@ -337,7 +352,18 @@ def generate_spines_meshes(shape: str, spines_skeletons: dict[str, NDArray]) -> 
         mesh_shift = np.array(meshes_library[(shape, "shift")], dtype=np.float64) * spine_length
         mesh_points = np.array(meshes_library[(shape, "points")], dtype=np.float64) + mesh_shift
         all_vertices.append(mesh_points)
-        all_offsets.append([shape_offsets[0] * (spine_idx + 1), shape_offsets[1] * (spine_idx + 1)])
+
+        num_triangles = shape_offsets[1]
+        # head_neck_values for this spine: [0, neck_split, num_triangles]
+        all_head_neck_values.extend([0, neck_split, num_triangles])
+
+        all_offsets.append(
+            [
+                shape_offsets[0] * (spine_idx + 1),
+                shape_offsets[1] * (spine_idx + 1),
+                3 * (spine_idx + 1),
+            ]
+        )
 
     spines_meshes = {
         "offsets": np.vstack(all_offsets),
@@ -345,6 +371,7 @@ def generate_spines_meshes(shape: str, spines_skeletons: dict[str, NDArray]) -> 
             np.array(meshes_library[(shape, "triangles")], dtype=np.int32), (num_spines, 1)
         ),
         "vertices": np.vstack(all_vertices),
+        "head_neck_values": np.array(all_head_neck_values, dtype=np.int32),
     }
 
     return spines_meshes
