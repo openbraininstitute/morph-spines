@@ -5,6 +5,101 @@ import pytest
 from numpy.testing import assert_array_equal
 
 
+@pytest.fixture
+def num_spines():
+    return 4
+
+
+@pytest.fixture
+def spines_collection():
+    return "collection_0"
+
+
+@pytest.fixture
+def spines_table(num_spines, spines_collection):
+    import pandas as pd
+    from scipy.spatial.transform import Rotation
+
+    from morph_spines.core.h5_schema import (
+        COL_AFF_SEC,
+        COL_ROTATION,
+        COL_SPINE_ID,
+        COL_SPINE_MORPH,
+        COL_TRANSLATION,
+    )
+
+    rotation = np.tile(Rotation.identity().as_quat(), (num_spines, 1))
+    translation = np.tile([0.0, 0.0, 0.0], (num_spines, 1)).astype(float)
+    return pd.DataFrame(
+        {
+            COL_SPINE_ID: range(num_spines),
+            COL_SPINE_MORPH: [spines_collection] * num_spines,
+            COL_ROTATION[0]: rotation[:, 0],
+            COL_ROTATION[1]: rotation[:, 1],
+            COL_ROTATION[2]: rotation[:, 2],
+            COL_ROTATION[3]: rotation[:, 3],
+            COL_TRANSLATION[0]: translation[:, 0],
+            COL_TRANSLATION[1]: translation[:, 1],
+            COL_TRANSLATION[2]: translation[:, 2],
+            COL_AFF_SEC: [int(2 + i / 2) for i in range(num_spines)],
+        }
+    )
+
+
+@pytest.fixture
+def spines_skeletons(num_spines, spines_collection):
+    import morphio
+    from morphio import PointLevel, SectionType
+    from neurom.core.morphology import Morphology
+
+    spines = morphio.mut.Morphology()
+    for idx in range(num_spines):
+        spine_start = [float(idx), 0.0, 0.0]
+        spine_end = [float(idx) + 1.0, 0.0, 0.0]
+        spines.append_root_section(
+            PointLevel([spine_start, spine_end], [1, 1]),
+            SectionType.axon,
+        )
+    return Morphology(
+        spines.as_immutable(),
+        spines_collection,
+        process_subtrees=False,
+    )
+
+
+@pytest.fixture
+def spines_meshes(spines_skeletons):
+    import trimesh
+
+    meshes = []
+    for section in spines_skeletons.to_morphio().root_sections:
+        vertices = []
+        spine_start = section.points[0]
+        vertices.append(spine_start)
+        end_x, end_y, end_z = section.points[-1]
+        vertices.append([end_x + 0.5, end_y, end_z])
+        vertices.append([end_x, end_y + 0.5, end_z])
+        vertices.append([end_x, end_y, end_z + 0.5])
+        tri = [[0, 1, 2], [0, 2, 3], [0, 3, 1], [1, 3, 2]]
+        meshes.append(trimesh.Trimesh(vertices=vertices, faces=tri))
+    return meshes
+
+
+@pytest.fixture
+def spines_with_meshes(spines_table, spines_skeletons, spines_meshes):
+    from morph_spines.core.spines import Spines
+
+    return Spines(
+        meshes_filepath="spines.h5",
+        morphology_name="collection_0",
+        spine_table=spines_table,
+        centered_spine_skeletons=spines_skeletons,
+        spines_are_centered=False,
+        spine_meshes=spines_meshes,
+        head_neck_offsets=[np.array([], dtype=int)] * len(spines_meshes),
+    )
+
+
 class TestSpinesMeshHeadNeck:
     """Tests for head/neck filtering through the Spines class mesh methods."""
 
@@ -204,101 +299,3 @@ class TestSpineType:
 
         spines_with_meshes.spine_table.loc[1, COL_SPINE_TYPE] = "thin"
         assert spines_with_meshes.spine_type(1) == SpineType.THIN
-
-
-# --- Fixtures ---
-
-
-@pytest.fixture
-def num_spines():
-    return 4
-
-
-@pytest.fixture
-def spines_collection():
-    return "collection_0"
-
-
-@pytest.fixture
-def spines_table(num_spines, spines_collection):
-    import pandas as pd
-    from scipy.spatial.transform import Rotation
-
-    from morph_spines.core.h5_schema import (
-        COL_AFF_SEC,
-        COL_ROTATION,
-        COL_SPINE_ID,
-        COL_SPINE_MORPH,
-        COL_TRANSLATION,
-    )
-
-    rotation = np.tile(Rotation.identity().as_quat(), (num_spines, 1))
-    translation = np.tile([0.0, 0.0, 0.0], (num_spines, 1)).astype(float)
-    return pd.DataFrame(
-        {
-            COL_SPINE_ID: range(num_spines),
-            COL_SPINE_MORPH: [spines_collection] * num_spines,
-            COL_ROTATION[0]: rotation[:, 0],
-            COL_ROTATION[1]: rotation[:, 1],
-            COL_ROTATION[2]: rotation[:, 2],
-            COL_ROTATION[3]: rotation[:, 3],
-            COL_TRANSLATION[0]: translation[:, 0],
-            COL_TRANSLATION[1]: translation[:, 1],
-            COL_TRANSLATION[2]: translation[:, 2],
-            COL_AFF_SEC: [int(2 + i / 2) for i in range(num_spines)],
-        }
-    )
-
-
-@pytest.fixture
-def spines_skeletons(num_spines, spines_collection):
-    import morphio
-    from morphio import PointLevel, SectionType
-    from neurom.core.morphology import Morphology
-
-    spines = morphio.mut.Morphology()
-    for idx in range(num_spines):
-        spine_start = [float(idx), 0.0, 0.0]
-        spine_end = [float(idx) + 1.0, 0.0, 0.0]
-        spines.append_root_section(
-            PointLevel([spine_start, spine_end], [1, 1]),
-            SectionType.axon,
-        )
-    return Morphology(
-        spines.as_immutable(),
-        spines_collection,
-        process_subtrees=False,
-    )
-
-
-@pytest.fixture
-def spines_meshes(spines_skeletons):
-    import trimesh
-
-    meshes = []
-    for section in spines_skeletons.to_morphio().root_sections:
-        vertices = []
-        spine_start = section.points[0]
-        vertices.append(spine_start)
-        end_x, end_y, end_z = section.points[-1]
-        vertices.append([end_x + 0.5, end_y, end_z])
-        vertices.append([end_x, end_y + 0.5, end_z])
-        vertices.append([end_x, end_y, end_z + 0.5])
-        tri = [[0, 1, 2], [0, 2, 3], [0, 3, 1], [1, 3, 2]]
-        meshes.append(trimesh.Trimesh(vertices=vertices, faces=tri))
-    return meshes
-
-
-@pytest.fixture
-def spines_with_meshes(spines_table, spines_skeletons, spines_meshes):
-    from morph_spines.core.spines import Spines
-
-    return Spines(
-        meshes_filepath="spines.h5",
-        morphology_name="collection_0",
-        spine_table=spines_table,
-        centered_spine_skeletons=spines_skeletons,
-        spines_are_centered=False,
-        spine_meshes=spines_meshes,
-        head_neck_offsets=[np.array([], dtype=int)] * len(spines_meshes),
-    )
