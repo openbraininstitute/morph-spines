@@ -11,17 +11,23 @@ class TestSpinesMeshHeadNeck:
     def test_spine_mesh_both_false_raises(self, spines_with_meshes):
         with pytest.raises(ValueError, match="At least one of"):
             spines_with_meshes.spine_mesh(
-                0, include_head=False, include_neck=False,
+                0,
+                include_head=False,
+                include_neck=False,
             )
 
     def test_centered_spine_mesh_both_false_raises(self, spines_with_meshes):
         with pytest.raises(ValueError, match="At least one of"):
             spines_with_meshes.centered_spine_mesh(
-                0, include_head=False, include_neck=False,
+                0,
+                include_head=False,
+                include_neck=False,
             )
 
     def test_spine_mesh_triangles_returns_flat_array(
-        self, spines_with_meshes, spines_meshes,
+        self,
+        spines_with_meshes,
+        spines_meshes,
     ):
         """spine_mesh_triangles returns a flat NDArray (no filtering)."""
         spine_id = 0
@@ -35,7 +41,11 @@ class TestSpinesConstructorWarnings:
     """Tests for warning messages when constructing Spines with invalid combinations."""
 
     def test_meshes_without_offsets_warns(
-        self, capsys, spines_table, spines_skeletons, spines_meshes,
+        self,
+        capsys,
+        spines_table,
+        spines_skeletons,
+        spines_meshes,
     ):
         """Providing spine_meshes without head_neck_offsets prints a warning."""
         from morph_spines.core.spines import Spines
@@ -56,7 +66,10 @@ class TestSpinesConstructorWarnings:
         assert s._valid_head_neck_offsets is False
 
     def test_offsets_without_meshes_warns(
-        self, capsys, spines_table, spines_skeletons,
+        self,
+        capsys,
+        spines_table,
+        spines_skeletons,
     ):
         """Providing head_neck_offsets without spine_meshes prints a warning."""
         from morph_spines.core.spines import Spines
@@ -106,11 +119,14 @@ class TestGetHeadNeckOffsetsLazy:
             vertices = np.zeros((8, 3), dtype=float)
             triangles = np.zeros((8, 3), dtype=int)
             # Spine 0: hn values at [0:3], spine 1: hn values at [3:3] (empty = undefined)
-            offsets = np.array([
-                [0, 0, 0],
-                [4, 4, 3],
-                [8, 8, 3],
-            ], dtype=int)
+            offsets = np.array(
+                [
+                    [0, 0, 0],
+                    [4, 4, 3],
+                    [8, 8, 3],
+                ],
+                dtype=int,
+            )
             head_neck_values = np.array([0, 3, 4], dtype=int)
 
             grp.create_dataset("vertices", data=vertices)
@@ -121,28 +137,33 @@ class TestGetHeadNeckOffsetsLazy:
         num_spines = 2
         rotation = np.tile(Rotation.identity().as_quat(), (num_spines, 1))
         translation = np.zeros((num_spines, 3), dtype=float)
-        spine_table = pd.DataFrame({
-            COL_SPINE_ID: [0, 1],
-            COL_SPINE_MORPH: ["coll_0", "coll_0"],
-            COL_ROTATION[0]: rotation[:, 0],
-            COL_ROTATION[1]: rotation[:, 1],
-            COL_ROTATION[2]: rotation[:, 2],
-            COL_ROTATION[3]: rotation[:, 3],
-            COL_TRANSLATION[0]: translation[:, 0],
-            COL_TRANSLATION[1]: translation[:, 1],
-            COL_TRANSLATION[2]: translation[:, 2],
-            COL_AFF_SEC: [0, 0],
-        })
+        spine_table = pd.DataFrame(
+            {
+                COL_SPINE_ID: [0, 1],
+                COL_SPINE_MORPH: ["coll_0", "coll_0"],
+                COL_ROTATION[0]: rotation[:, 0],
+                COL_ROTATION[1]: rotation[:, 1],
+                COL_ROTATION[2]: rotation[:, 2],
+                COL_ROTATION[3]: rotation[:, 3],
+                COL_TRANSLATION[0]: translation[:, 0],
+                COL_TRANSLATION[1]: translation[:, 1],
+                COL_TRANSLATION[2]: translation[:, 2],
+                COL_AFF_SEC: [0, 0],
+            }
+        )
 
         import morphio
 
         skeletons = morphio.mut.Morphology()
         for _ in range(num_spines):
             skeletons.append_root_section(
-                PointLevel([[0, 0, 0], [0, 1, 0]], [1, 1]), SectionType.axon,
+                PointLevel([[0, 0, 0], [0, 1, 0]], [1, 1]),
+                SectionType.axon,
             )
         centered_skeletons = Morphology(
-            skeletons.as_immutable(), "coll_0", process_subtrees=False,
+            skeletons.as_immutable(),
+            "coll_0",
+            process_subtrees=False,
         )
 
         s = Spines(
@@ -240,10 +261,13 @@ def spines_skeletons(num_spines, spines_collection):
         spine_start = [float(idx), 0.0, 0.0]
         spine_end = [float(idx) + 1.0, 0.0, 0.0]
         spines.append_root_section(
-            PointLevel([spine_start, spine_end], [1, 1]), SectionType.axon,
+            PointLevel([spine_start, spine_end], [1, 1]),
+            SectionType.axon,
         )
     return Morphology(
-        spines.as_immutable(), spines_collection, process_subtrees=False,
+        spines.as_immutable(),
+        spines_collection,
+        process_subtrees=False,
     )
 
 
