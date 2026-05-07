@@ -237,10 +237,11 @@ class Spines:
           Returns an empty array
 
         - Otherwise:
-          Returns an offset-style array of length H + 1 for a spine with H heads:
-          - Neck triangles: triangles[0 : offsets[0]]
-          - N-th head: triangles[offsets[N] : offsets[N+1]]
-          - total number of spine triangles: offsets[H]
+          Returns an offset-style array of length H + 2 for a spine with H heads:
+          - Undefined triangles: triangles[0 : offsets[0]]
+          - Neck triangles: triangles[offsets[0] : offsets[1]]
+          - N-th head: triangles[offsets[N+1] : offsets[N+2]]
+          - total number of spine triangles: offsets[-1]
 
         The head/neck data is stored using a double-index approach: a flat
         head_neck_values dataset holds all offsets concatenated, and
