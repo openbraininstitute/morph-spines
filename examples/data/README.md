@@ -219,8 +219,10 @@ heads, where all indices are local to the spine's own triangle range:
 - Head N triangles: `spine_triangles[spine_hn_offsets[N+1] : spine_hn_offsets[N+2]]`
 - `spine_hn_offsets[-1]` equals the total number of triangles for that spine.
 
-Undefined triangles are always returned regardless of filtering options. For the common case
-where all triangles are classified, `spine_hn_offsets[0]` is simply `0`.
+Undefined triangles are always returned regardless of filtering options. When all triangles are
+classified (no undefined region), `spine_hn_offsets[0]` is `0`. When no triangles are classified
+(all undefined), the spine has an empty slice in `head_neck_values` (equal consecutive offsets in
+column 2) and all triangles are returned regardless of the filter flags.
 
 For spines without head/neck classification, the consecutive offsets in column 2 are equal
 (`offsets[IDS, 2] == offsets[IDS+1, 2]`), resulting in an empty slice. In this case, all
