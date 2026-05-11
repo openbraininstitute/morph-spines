@@ -74,6 +74,11 @@ def write_neuron_data(output_file: str, data: dict) -> None:
             col_meshes_group.create_dataset("triangles", data=spines_meshes["triangles"])
             col_meshes_group.create_dataset("vertices", data=spines_meshes["vertices"])
 
+            if "head_neck_values" in spines_meshes:
+                col_meshes_group.create_dataset(
+                    "head_neck_values", data=spines_meshes["head_neck_values"]
+                )
+
         # Top group /spines/skeletons
         spines_skel = spines_grp.require_group("skeletons")
 

@@ -15,4 +15,4 @@ See `examples` folder for usage examples.
 See `examples/data` for documentation on the file format.
 
 
-Copyright (c) 2025 Open Brain Institute
+Copyright (c) 2025-2026 Open Brain Institute

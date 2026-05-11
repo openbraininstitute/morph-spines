@@ -78,7 +78,7 @@ def test_load_spine_meshes_for_morphology(
         multiple_morph_spines_file, f"{GRP_EDGES}/{multiple_morph_ids[0]}"
     )
 
-    meshes = load_spine_meshes_for_morphology(
+    meshes, _ = load_spine_meshes_for_morphology(
         multiple_morph_spines_file,
         multiple_morph_ids[0],
         spines_are_centered=False,
@@ -98,7 +98,7 @@ def test_load_spine_meshes_for_morphology_centered(
         f"{GRP_EDGES}/{multiple_morph_ids[0]}",
     )
 
-    meshes = load_spine_meshes_for_morphology(
+    meshes, _ = load_spine_meshes_for_morphology(
         multiple_morph_spines_centered_file,
         multiple_morph_ids[0],
         spines_are_centered=True,
@@ -151,13 +151,10 @@ def test_load_centered_spine_meshes_for_morphology_centered_differed(
 
 
 def test_load_spine_meshes_for_morphology_without_spine_table(
-        single_morph_spines_file, single_morph_id, meshes_reference
+    single_morph_spines_file, single_morph_id, meshes_reference
 ):
-    meshes = load_spine_meshes_for_morphology(
-        single_morph_spines_file,
-        single_morph_id,
-        spines_are_centered=False,
-        spine_table=None
+    meshes, _ = load_spine_meshes_for_morphology(
+        single_morph_spines_file, single_morph_id, spines_are_centered=False, spine_table=None
     )
 
     assert len(meshes) == len(meshes_reference)

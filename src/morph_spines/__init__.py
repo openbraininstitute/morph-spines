@@ -6,6 +6,7 @@ __version__ = version(__package__)
 
 from morph_spines.core.morphology_with_spines import MorphologyWithSpines
 from morph_spines.core.soma import Soma
+from morph_spines.core.spine_type import SpineType
 from morph_spines.core.spines import Spines
 from morph_spines.utils.morph_spine_loader import (
     load_morphology,
@@ -16,6 +17,7 @@ from morph_spines.utils.morph_spine_loader import (
 
 __all__ = [
     "Soma",
+    "SpineType",
     "Spines",
     "MorphologyWithSpines",
     "load_morphology",
