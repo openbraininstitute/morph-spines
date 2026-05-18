@@ -14,6 +14,14 @@ from morph_spines.utils.morph_spine_loader import (
     load_soma,
     load_spines,
 )
+from morph_spines.utils.morph_spine_writer import (
+    validate_spine_table,
+    write_morphology,
+    write_soma_mesh,
+    write_spine_meshes,
+    write_spine_skeletons,
+    write_spine_table,
+)
 
 __all__ = [
     "Soma",
@@ -24,4 +32,10 @@ __all__ = [
     "load_morphology_with_spines",
     "load_soma",
     "load_spines",
+    "validate_spine_table",
+    "write_morphology",
+    "write_soma_mesh",
+    "write_spine_meshes",
+    "write_spine_skeletons",
+    "write_spine_table",
 ]

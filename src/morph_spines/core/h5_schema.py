@@ -31,3 +31,39 @@ COL_AFF_SEC = "afferent_section_id"
 
 # Metadata attributes
 ATT_VERSION = "version"
+
+# Spine table format versions
+SPINE_TABLE_VER_PANDAS_DF = (0, 1)  # Deprecated: pandas DataFrame format
+SPINE_TABLE_VER_H5_DATASETS = (1, 0)  # Current: column-wise HDF5 datasets
+
+# Mandatory columns in the spine table and their expected dtype kinds:
+#   "f" = floating point, "i" = signed integer, "ui" = unsigned integer, "str" = string
+MANDATORY_COLUMNS = {
+    "afferent_surface_x": "f",
+    "afferent_surface_y": "f",
+    "afferent_surface_z": "f",
+    "afferent_center_x": "f",
+    "afferent_center_y": "f",
+    "afferent_center_z": "f",
+    "spine_morphology": "str",
+    "spine_id": "ui",
+    "spine_length": "f",
+    "spine_orientation_vector_x": "f",
+    "spine_orientation_vector_y": "f",
+    "spine_orientation_vector_z": "f",
+    "spine_rotation_x": "f",
+    "spine_rotation_y": "f",
+    "spine_rotation_z": "f",
+    "spine_rotation_w": "f",
+    "afferent_section_id": "ui",
+    "afferent_segment_id": "i",
+    "afferent_segment_offset": "f",
+    "afferent_section_pos": "f",
+}
+
+# Optional columns and their expected dtype kinds
+OPTIONAL_COLUMNS = {
+    "spine_volume": "f",
+    "spine_neck_diameter": "f",
+    "spine_type": "str",
+}

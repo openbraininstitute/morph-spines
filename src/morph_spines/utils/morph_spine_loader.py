@@ -35,6 +35,8 @@ from morph_spines.core.h5_schema import (
     OFF_COL_HEAD_NECK,
     OFF_COL_TRIANGLES,
     OFF_COL_VERTICES,
+    SPINE_TABLE_VER_H5_DATASETS,
+    SPINE_TABLE_VER_PANDAS_DF,
 )
 from morph_spines.core.morphology_with_spines import MorphologyWithSpines
 from morph_spines.core.soma import Soma
@@ -219,7 +221,7 @@ def load_spine_table(filepath: str, name: str) -> pd.DataFrame:
     """
     major, minor = _get_spine_table_version(filepath, name)
 
-    if major == 0 and minor == 1:
+    if (major, minor) == SPINE_TABLE_VER_PANDAS_DF:
         # Pandas DataFrame format
         if not _is_pandas_dataframe_group(filepath, name):
             raise TypeError(f"Could not find a valid spine table in {name} for version 0.1")
@@ -234,7 +236,7 @@ def load_spine_table(filepath: str, name: str) -> pd.DataFrame:
                 spine_table.to_frame() if isinstance(spine_table, pd.Series) else spine_table
             )
 
-    elif major == 1 and minor == 0:
+    elif (major, minor) == SPINE_TABLE_VER_H5_DATASETS:
         # Group of datasets format
         if not _is_datasets_group(filepath, name):
             raise TypeError(f"Could not find a valid spine table in {name} for version 1.0")
