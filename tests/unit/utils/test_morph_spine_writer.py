@@ -27,7 +27,6 @@ from morph_spines.utils.morph_spine_writer import (
     write_spine_table,
 )
 
-
 # =============================================================================
 # Fixtures
 # =============================================================================
@@ -37,28 +36,30 @@ from morph_spines.utils.morph_spine_writer import (
 def valid_spine_table():
     """Create a minimal valid spine table with all mandatory columns."""
     n = 3
-    return pd.DataFrame({
-        "afferent_surface_x": np.random.rand(n),
-        "afferent_surface_y": np.random.rand(n),
-        "afferent_surface_z": np.random.rand(n),
-        "afferent_center_x": np.random.rand(n),
-        "afferent_center_y": np.random.rand(n),
-        "afferent_center_z": np.random.rand(n),
-        "spine_morphology": ["morph_a"] * n,
-        "spine_id": np.array([0, 1, 2], dtype=np.uint32),
-        "spine_length": np.random.rand(n),
-        "spine_orientation_vector_x": np.random.rand(n),
-        "spine_orientation_vector_y": np.random.rand(n),
-        "spine_orientation_vector_z": np.random.rand(n),
-        "spine_rotation_x": np.random.rand(n),
-        "spine_rotation_y": np.random.rand(n),
-        "spine_rotation_z": np.random.rand(n),
-        "spine_rotation_w": np.random.rand(n),
-        "afferent_section_id": np.array([1, 2, 3], dtype=np.uint32),
-        "afferent_segment_id": np.array([0, 1, 2], dtype=np.int32),
-        "afferent_segment_offset": np.random.rand(n),
-        "afferent_section_pos": np.random.rand(n),
-    })
+    return pd.DataFrame(
+        {
+            "afferent_surface_x": np.random.rand(n),
+            "afferent_surface_y": np.random.rand(n),
+            "afferent_surface_z": np.random.rand(n),
+            "afferent_center_x": np.random.rand(n),
+            "afferent_center_y": np.random.rand(n),
+            "afferent_center_z": np.random.rand(n),
+            "spine_morphology": ["morph_a"] * n,
+            "spine_id": np.array([0, 1, 2], dtype=np.uint32),
+            "spine_length": np.random.rand(n),
+            "spine_orientation_vector_x": np.random.rand(n),
+            "spine_orientation_vector_y": np.random.rand(n),
+            "spine_orientation_vector_z": np.random.rand(n),
+            "spine_rotation_x": np.random.rand(n),
+            "spine_rotation_y": np.random.rand(n),
+            "spine_rotation_z": np.random.rand(n),
+            "spine_rotation_w": np.random.rand(n),
+            "afferent_section_id": np.array([1, 2, 3], dtype=np.uint32),
+            "afferent_segment_id": np.array([0, 1, 2], dtype=np.int32),
+            "afferent_segment_offset": np.random.rand(n),
+            "afferent_section_pos": np.random.rand(n),
+        }
+    )
 
 
 @pytest.fixture
@@ -73,11 +74,14 @@ def sample_triangles():
 
 @pytest.fixture
 def sample_points():
-    return np.array([
-        [0.0, 0.0, 0.0, 0.5],
-        [1.0, 0.0, 0.0, 0.4],
-        [2.0, 0.0, 0.0, 0.3],
-    ], dtype=np.float64)
+    return np.array(
+        [
+            [0.0, 0.0, 0.0, 0.5],
+            [1.0, 0.0, 0.0, 0.4],
+            [2.0, 0.0, 0.0, 0.3],
+        ],
+        dtype=np.float64,
+    )
 
 
 @pytest.fixture
@@ -356,7 +360,9 @@ class TestWriteSpineMeshes:
             assert f"{GRP_SPINES}/{GRP_MESHES}/morph_a/{GRP_TRIANGLES}" in h5
             assert f"{GRP_SPINES}/{GRP_MESHES}/morph_a/{GRP_OFFSETS}" in h5
 
-    def test_write_data_roundtrip(self, tmp_path, sample_vertices, sample_triangles, sample_offsets):
+    def test_write_data_roundtrip(
+        self, tmp_path, sample_vertices, sample_triangles, sample_offsets
+    ):
         f = tmp_path / "output.h5"
         write_spine_meshes(str(f), "morph_a", sample_vertices, sample_triangles, sample_offsets)
 
@@ -376,15 +382,11 @@ class TestWriteSpineMeshes:
             assert grp[GRP_TRIANGLES].compression == "gzip"
             assert grp[GRP_OFFSETS].compression == "gzip"
 
-    def test_write_with_head_neck_values(
-        self, tmp_path, sample_vertices, sample_triangles
-    ):
+    def test_write_with_head_neck_values(self, tmp_path, sample_vertices, sample_triangles):
         offsets = np.array([[0, 0, 0], [3, 1, 2]], dtype=np.int32)
         hn_values = np.array([0, 1], dtype=np.int32)
         f = tmp_path / "output.h5"
-        write_spine_meshes(
-            str(f), "morph_a", sample_vertices, sample_triangles, offsets, hn_values
-        )
+        write_spine_meshes(str(f), "morph_a", sample_vertices, sample_triangles, offsets, hn_values)
 
         with h5py.File(f, "r") as h5:
             grp = h5[f"{GRP_SPINES}/{GRP_MESHES}/morph_a"]
@@ -408,9 +410,7 @@ class TestWriteSpineMeshes:
         write_spine_meshes(str(f), "morph_a", sample_vertices, sample_triangles, sample_offsets)
 
         with pytest.raises(ValueError, match="already exists"):
-            write_spine_meshes(
-                str(f), "morph_a", sample_vertices, sample_triangles, sample_offsets
-            )
+            write_spine_meshes(str(f), "morph_a", sample_vertices, sample_triangles, sample_offsets)
 
 
 # =============================================================================
