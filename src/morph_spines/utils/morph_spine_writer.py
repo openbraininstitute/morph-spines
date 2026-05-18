@@ -154,7 +154,7 @@ def write_spine_table(
 
             # Convert object/string columns to variable-length UTF-8 strings
             if col_data.dtype == object or col_data.dtype.kind in ("U", "S"):
-                col_data = col_data.astype(str)
+                col_data = np.array(col_data.astype(str), dtype=object)
                 dt = h5py.string_dtype(encoding="utf-8")
                 neuron_grp.create_dataset(col_name, data=col_data, dtype=dt)
             else:
