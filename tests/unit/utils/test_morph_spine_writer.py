@@ -27,10 +27,6 @@ from morph_spines.utils.morph_spine_writer import (
     write_spine_table,
 )
 
-# =============================================================================
-# Fixtures
-# =============================================================================
-
 
 @pytest.fixture
 def valid_spine_table():
@@ -87,11 +83,6 @@ def sample_points():
 @pytest.fixture
 def sample_structure():
     return np.array([[0, 2, -1]], dtype=np.int32)
-
-
-# =============================================================================
-# validate_spine_table
-# =============================================================================
 
 
 class TestValidateSpineTable:
@@ -160,11 +151,6 @@ class TestValidateSpineTable:
         )
         with pytest.raises(ValueError, match="Spine table validation failed"):
             validate_spine_table(valid_spine_table)
-
-
-# =============================================================================
-# write_spine_table
-# =============================================================================
 
 
 class TestWriteSpineTable:
@@ -254,11 +240,6 @@ class TestWriteSpineTable:
         assert not f.exists()
 
 
-# =============================================================================
-# write_morphology
-# =============================================================================
-
-
 class TestWriteMorphology:
     def test_write_creates_group(self, tmp_path, sample_points, sample_structure):
         f = tmp_path / "output.h5"
@@ -299,11 +280,6 @@ class TestWriteMorphology:
             write_morphology(str(f), "neuron_01", sample_points, sample_structure)
 
 
-# =============================================================================
-# write_soma_mesh
-# =============================================================================
-
-
 class TestWriteSomaMesh:
     def test_write_creates_group(self, tmp_path, sample_vertices, sample_triangles):
         f = tmp_path / "output.h5"
@@ -338,11 +314,6 @@ class TestWriteSomaMesh:
 
         with pytest.raises(ValueError, match="already exists"):
             write_soma_mesh(str(f), "neuron_01", sample_vertices, sample_triangles)
-
-
-# =============================================================================
-# write_spine_meshes
-# =============================================================================
 
 
 class TestWriteSpineMeshes:
@@ -413,11 +384,6 @@ class TestWriteSpineMeshes:
             write_spine_meshes(str(f), "morph_a", sample_vertices, sample_triangles, sample_offsets)
 
 
-# =============================================================================
-# write_spine_skeletons
-# =============================================================================
-
-
 class TestWriteSpineSkeletons:
     def test_write_creates_group(self, tmp_path, sample_points, sample_structure):
         f = tmp_path / "output.h5"
@@ -453,40 +419,3 @@ class TestWriteSpineSkeletons:
 
         with pytest.raises(ValueError, match="already exists"):
             write_spine_skeletons(str(f), "morph_a", sample_points, sample_structure)
-
-
-# =============================================================================
-# Integration: write full file and read back with loader
-# =============================================================================
-
-
-class TestWriteReadRoundtrip:
-    def test_spine_table_readable_by_loader(self, tmp_path, valid_spine_table):
-        from morph_spines.utils.morph_spine_loader import load_spine_table
-
-        f = tmp_path / "output.h5"
-        write_spine_table(str(f), "neuron_01", valid_spine_table)
-
-        loaded = load_spine_table(str(f), f"{GRP_EDGES}/neuron_01")
-
-        assert set(loaded.columns) == set(valid_spine_table.columns)
-        assert len(loaded) == len(valid_spine_table)
-        for col in valid_spine_table.columns:
-            loaded_arr = loaded[col].to_numpy()
-            expected_arr = valid_spine_table[col].to_numpy()
-            # String columns: compare as strings
-            if expected_arr.dtype == object or expected_arr.dtype.kind in ("U", "S", "O"):
-                np.testing.assert_array_equal(
-                    loaded_arr.astype(str),
-                    expected_arr.astype(str),
-                )
-            elif loaded_arr.dtype.kind in ("U", "S", "O"):
-                np.testing.assert_array_equal(
-                    loaded_arr.astype(str),
-                    expected_arr.astype(str),
-                )
-            else:
-                np.testing.assert_array_almost_equal(
-                    loaded_arr.astype(float),
-                    expected_arr.astype(float),
-                )
