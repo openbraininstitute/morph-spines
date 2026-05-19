@@ -61,9 +61,10 @@ class Spines:
         self._valid_head_neck_offsets = True
 
         if spine_meshes is not None and head_neck_offsets is None:
-            print(
-                "WARNING: no head_neck_offsets provided, spine head/neck classification won't be "
-                "available"
+            import warnings
+            warnings.warn(
+                "No head_neck_offsets provided, spine head/neck classification won't be available.",
+                stacklevel=2,
             )
             self._valid_head_neck_offsets = False
 
@@ -71,9 +72,10 @@ class Spines:
         self._head_neck_offsets = head_neck_offsets if head_neck_offsets is not None else []
 
         if head_neck_offsets is not None and spine_meshes is None:
-            print(
-                "WARNING: head_neck_offsets value will be ignored because spine_meshes were not"
-                " provided",
+            import warnings
+            warnings.warn(
+                "head_neck_offsets value will be ignored because spine_meshes were not provided.",
+                stacklevel=2,
             )
             self._head_neck_offsets = []
 

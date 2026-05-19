@@ -137,53 +137,57 @@ class TestSpinesConstructorWarnings:
 
     def test_meshes_without_offsets_warns(
         self,
-        capsys,
         spines_table,
         spines_skeletons,
         spines_meshes,
     ):
-        """Providing spine_meshes without head_neck_offsets prints a warning."""
+        """Providing spine_meshes without head_neck_offsets emits a warning."""
+        import warnings
+
         from morph_spines.core.spines import Spines
 
-        s = Spines(
-            meshes_filepath="spines.h5",
-            morphology_name="collection_0",
-            spine_table=spines_table,
-            centered_spine_skeletons=spines_skeletons,
-            spines_are_centered=False,
-            spine_meshes=spines_meshes,
-            head_neck_offsets=None,
-        )
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            s = Spines(
+                meshes_filepath="spines.h5",
+                morphology_name="collection_0",
+                spine_table=spines_table,
+                centered_spine_skeletons=spines_skeletons,
+                spines_are_centered=False,
+                spine_meshes=spines_meshes,
+                head_neck_offsets=None,
+            )
 
-        captured = capsys.readouterr()
-        assert "WARNING" in captured.out
-        assert "head_neck_offsets" in captured.out
+        assert len(w) == 1
+        assert "head_neck_offsets" in str(w[0].message)
         assert s._valid_head_neck_offsets is False
 
     def test_offsets_without_meshes_warns(
         self,
-        capsys,
         spines_table,
         spines_skeletons,
     ):
-        """Providing head_neck_offsets without spine_meshes prints a warning."""
+        """Providing head_neck_offsets without spine_meshes emits a warning."""
+        import warnings
+
         from morph_spines.core.spines import Spines
 
         offsets = [np.array([0, 2, 4], dtype=int)] * 4
 
-        s = Spines(
-            meshes_filepath="spines.h5",
-            morphology_name="collection_0",
-            spine_table=spines_table,
-            centered_spine_skeletons=spines_skeletons,
-            spines_are_centered=False,
-            spine_meshes=None,
-            head_neck_offsets=offsets,
-        )
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            s = Spines(
+                meshes_filepath="spines.h5",
+                morphology_name="collection_0",
+                spine_table=spines_table,
+                centered_spine_skeletons=spines_skeletons,
+                spines_are_centered=False,
+                spine_meshes=None,
+                head_neck_offsets=offsets,
+            )
 
-        captured = capsys.readouterr()
-        assert "WARNING" in captured.out
-        assert "ignored" in captured.out
+        assert len(w) == 1
+        assert "ignored" in str(w[0].message)
         assert s._head_neck_offsets == []
 
 

@@ -359,7 +359,6 @@ def test_centered_spine_meshes_for_section(
 
     for mesh, expected_mesh in zip(meshes, section_meshes, strict=True):
         assert isinstance(mesh, trimesh.Trimesh)
-        print(f"mesh: \n{mesh.vertices}, \nexpected_mesh: \n{expected_mesh.vertices}")
         assert_allclose(mesh.vertices, expected_mesh.vertices)
         assert_allclose(mesh.faces, expected_mesh.faces)
 
@@ -371,7 +370,6 @@ def test_spine_meshes_for_morphology(spines_with_meshes, spines_meshes):
 
     for mesh, expected_mesh in zip(morph_meshes, spines_meshes, strict=True):
         assert isinstance(mesh, trimesh.Trimesh)
-        print(f"mesh: \n{mesh.vertices}, \nexpected_mesh: \n{expected_mesh.vertices}")
         assert_allclose(mesh.vertices, expected_mesh.vertices)
         assert_allclose(mesh.faces, expected_mesh.faces)
 
@@ -392,7 +390,6 @@ def test_centered_spine_meshes_for_morphology(spines_with_meshes, spines_meshes)
 
     for mesh, expected_mesh in zip(morph_meshes, spines_meshes, strict=True):
         assert isinstance(mesh, trimesh.Trimesh)
-        print(f"mesh: \n{mesh.vertices}, \nexpected_mesh: \n{expected_mesh.vertices}")
         assert_allclose(mesh.vertices, expected_mesh.vertices)
         assert_allclose(mesh.faces, expected_mesh.faces)
 
@@ -406,6 +403,5 @@ def test_centered_spine_meshes_for_morphology_centered(
 
     for mesh, expected_mesh in zip(morph_meshes, centered_spines_meshes, strict=True):
         assert isinstance(mesh, trimesh.Trimesh)
-        print(f"mesh: \n{mesh.vertices}, \nexpected_mesh: \n{expected_mesh.vertices}")
         assert_allclose(mesh.vertices, expected_mesh.vertices)
         assert_allclose(mesh.faces, expected_mesh.faces)
