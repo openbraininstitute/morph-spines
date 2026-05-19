@@ -96,7 +96,9 @@ def validate_spine_table(spine_table: pd.DataFrame) -> None:
                     f"Column '{col_name}': expected signed integer type, got dtype '{col.dtype}'"
                 )
         else:
-            raise ValueError(f"Unknown expected dtype kind '{expected_kind}' for column '{col_name}'")
+            raise ValueError(
+                f"Unknown expected dtype kind '{expected_kind}' for column '{col_name}'"
+            )
 
     if errors:
         raise ValueError("Spine table validation failed:\n  - " + "\n  - ".join(errors))

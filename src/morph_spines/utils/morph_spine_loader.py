@@ -59,9 +59,7 @@ def _resolve_morphology_name(morphology_filepath: str, morphology_name: str | No
     try:
         h5 = h5py.File(morphology_filepath, "r")
     except OSError as e:
-        raise ValueError(
-            f"Cannot open file '{morphology_filepath}': {e}"
-        ) from e
+        raise ValueError(f"Cannot open file '{morphology_filepath}': {e}") from e
 
     with h5:
         if GRP_MORPH in list(h5.keys()):

@@ -75,9 +75,7 @@ def test_inverse_transform_matrix_for_spine(
     spine_rotation_ref, spine_translation_ref, spine_points_ref, spine_points_transformed_ref
 ):
     """The 4x4 inverse transform matrix should produce the same result as inverse_transform."""
-    matrix = geometry.inverse_transform_matrix_for_spine(
-        spine_rotation_ref, spine_translation_ref
-    )
+    matrix = geometry.inverse_transform_matrix_for_spine(spine_rotation_ref, spine_translation_ref)
 
     # Apply the 4x4 matrix to the transformed point (in homogeneous coordinates)
     point_h = np.append(spine_points_transformed_ref, 1.0)

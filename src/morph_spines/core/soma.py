@@ -37,9 +37,7 @@ class Soma:
                 f"Expected path: /{GRP_SOMA}/{GRP_MESHES}/{self.name}"
             ) from e
         except OSError as e:
-            raise ValueError(
-                f"Cannot open file '{self._filepath}': {e}"
-            ) from e
+            raise ValueError(f"Cannot open file '{self._filepath}': {e}") from e
 
     @property
     def soma_mesh_points(self) -> NDArray:
@@ -50,7 +48,7 @@ class Soma:
         """
         if self._vertices is None:
             self._load_mesh_data()
-        return self._vertices
+        return self._vertices  # type: ignore[return-value]
 
     @property
     def soma_mesh_triangles(self) -> NDArray:
@@ -61,7 +59,7 @@ class Soma:
         """
         if self._triangles is None:
             self._load_mesh_data()
-        return self._triangles
+        return self._triangles  # type: ignore[return-value]
 
     @property
     def soma_mesh(self) -> trimesh.Trimesh:
