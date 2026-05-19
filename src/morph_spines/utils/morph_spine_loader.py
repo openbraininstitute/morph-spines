@@ -56,7 +56,14 @@ def _resolve_morphology_name(morphology_filepath: str, morphology_name: str | No
 
     Returns: the morphology name to load data from
     """
-    with h5py.File(morphology_filepath, "r") as h5:
+    try:
+        h5 = h5py.File(morphology_filepath, "r")
+    except OSError as e:
+        raise ValueError(
+            f"Cannot open file '{morphology_filepath}': {e}"
+        ) from e
+
+    with h5:
         if GRP_MORPH in list(h5.keys()):
             lst_morph_names = list(h5[GRP_MORPH].keys())
             if len(lst_morph_names) == 0:
