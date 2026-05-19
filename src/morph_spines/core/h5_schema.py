@@ -33,7 +33,6 @@ COL_AFF_SEC = "afferent_section_id"
 ATT_VERSION = "version"
 
 # Spine table format versions
-SPINE_TABLE_VER_PANDAS_DF = (0, 1)  # Deprecated: pandas DataFrame format
 SPINE_TABLE_VER_H5_DATASETS = (1, 0)  # Current: column-wise HDF5 datasets
 
 # Mandatory columns in the spine table and their expected dtype kinds:

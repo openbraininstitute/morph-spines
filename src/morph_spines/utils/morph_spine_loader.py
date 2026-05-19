@@ -36,7 +36,6 @@ from morph_spines.core.h5_schema import (
     OFF_COL_TRIANGLES,
     OFF_COL_VERTICES,
     SPINE_TABLE_VER_H5_DATASETS,
-    SPINE_TABLE_VER_PANDAS_DF,
 )
 from morph_spines.core.morphology_with_spines import MorphologyWithSpines
 from morph_spines.core.soma import Soma
@@ -106,19 +105,6 @@ def load_morphology(
     coll = morphio.Collection(filepath)
     morphology = coll.load(f"{GRP_MORPH}/{name}")
     return Morphology(morphology, name, process_subtrees=process_subtrees)
-
-
-def _is_pandas_dataframe_group(filepath: str, name: str) -> bool:
-    """Check if an H5 group is a pandas dataframe."""
-    with h5py.File(filepath, "r") as h5:
-        if name not in h5:
-            raise TypeError(f"Could not find {name} inside the H5 file")
-
-        df_group = h5[name]
-        if isinstance(df_group, h5py.Group):
-            if "pandas_type" in df_group.attrs:
-                return True
-    return False
 
 
 def _is_datasets_group(filepath: str, name: str) -> bool:
@@ -221,22 +207,7 @@ def load_spine_table(filepath: str, name: str) -> pd.DataFrame:
     """
     major, minor = _get_spine_table_version(filepath, name)
 
-    if (major, minor) == SPINE_TABLE_VER_PANDAS_DF:
-        # Pandas DataFrame format
-        if not _is_pandas_dataframe_group(filepath, name):
-            raise TypeError(f"Could not find a valid spine table in {name} for version 0.1")
-        else:
-            print(
-                "WARNING: deprecated format: spine table stored as pandas DataFrame in HDF5 file."
-                "\nPlease, use the conversion script 'h5_dataframe_to_h5_datasets_group.py' to "
-                "update the format."
-            )
-            spine_table = pd.read_hdf(filepath, key=name)
-            spine_table = (
-                spine_table.to_frame() if isinstance(spine_table, pd.Series) else spine_table
-            )
-
-    elif (major, minor) == SPINE_TABLE_VER_H5_DATASETS:
+    if (major, minor) == SPINE_TABLE_VER_H5_DATASETS:
         # Group of datasets format
         if not _is_datasets_group(filepath, name):
             raise TypeError(f"Could not find a valid spine table in {name} for version 1.0")
@@ -245,7 +216,9 @@ def load_spine_table(filepath: str, name: str) -> pd.DataFrame:
 
     else:
         raise TypeError(
-            f"Could not find a valid spine table in {name}. Unsupported version {major}.{minor}"
+            f"Could not find a valid spine table in {name}. Unsupported version {major}.{minor}. "
+            f"If this file uses the deprecated pandas DataFrame format (v0.1), please convert it "
+            f"using the 'h5_dataframe_to_h5_datasets_group.py' script."
         )
 
     return spine_table

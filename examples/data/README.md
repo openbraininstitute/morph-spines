@@ -16,28 +16,26 @@ neurons.
 ## `/edges` group
 
 The `/edges` group contains one spines table for each neuron present in the file. Each spines table
-is stored inside the neuron's ID subgroup, and it describes different properties related to the 
+is stored inside the neuron's name subgroup, and it describes different properties related to the 
 neuron's spines.
 
-For example, for a neuron ID `"01234"`, the corresponding spines table will be stored under
+For example, for a neuron named `"01234"`, the corresponding spines table will be stored under
 `/edges/01234`.
 
-The spines table can be currently stored in 2 different formats, explained below. The format is
-determined by the version inside the metadata group. The supported formats are:
-- [Deprecated] v0.1: Pandas DataFrame (support will be dropped as of morph-spines v1.0)
-- v1.0: H5 group of datasets
+The spines table is stored as an H5 group of datasets (v1.0 format). The metadata group contains
+the version of the format.
 
-In any case, `morph-spines` recognizes the format in which the spines table is stored through its
-version and loads it into a Pandas DataFrame at runtime.
-
-The metadata is stored as a group under the neuron's ID subgroup called `metadata` and contains
+The metadata is stored as a group under the neuron's subgroup called `metadata` and contains
 the version (in major.minor format) of the spines table. The version is stored as an attribute of
 the group with the name `version` and it is represented as an array of unsigned integers. The
 presence of this group is mandatory.
 
 Following the example above, the metadata would be stored as a group called
-`/edges/01234/metadata` with a `version` attribute containing an array with `[0, 1]` if it
-contains a DataFrame or `[1, 0]` if it uses the group of datasets format.
+`/edges/01234/metadata` with a `version` attribute containing the array `[1, 0]`.
+
+Note: files using the deprecated v0.1 format (pandas DataFrame) are no longer supported for
+reading. Use the `h5_dataframe_to_h5_datasets_group.py` conversion script under the `scripts`
+folder to migrate them.
 
 ### Spines table
 
@@ -89,23 +87,17 @@ Additionally, we can have the following columns as optional:
 
 The presence of the spines table is mandatory.
 
-#### Spines table stored as Pandas Dataframe
+#### Spines table format
 
-In this case, the DataFrame can be read and written through Panda's `pandas.DataFrame.read_hdf()`
-and `pandas.DataFrame.to_hdf()` respectively. The internal H5 representation is managed by the
-Pandas library.
-
-#### Spines table stored as group of datasets
-
-In this case, the spines table is stored column-wise, having one H5 dataset per column. The name of
+The spines table is stored column-wise, having one H5 dataset per column. The name of
 the dataset corresponds to the name of the column.
 
-All datasets must be stored under the same H5 group (usually, the neuron ID) and must have exactly
-the same length. Datasets cannot be multidimensional datasets: only 1-dimensional arrays and
-scalars are accepted (in which case are interpreted as an array of a single element).
+All datasets must be stored under the same H5 group (the neuron name) and must have exactly
+the same length. Datasets cannot be multidimensional: only 1-dimensional arrays and
+scalars are accepted (in which case they are interpreted as an array of a single element).
 
-The H5 group can only contain the datasets representing spines table columns. No other subgroups or
-datasets with different length are allowed.
+The H5 group can only contain the datasets representing spines table columns and the mandatory
+`metadata` subgroup. No other subgroups or datasets with different length are allowed.
 
 
 ## `/morphology` group

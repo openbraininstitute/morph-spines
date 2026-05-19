@@ -24,7 +24,7 @@ python create_sample_data.py -o output.h5 -nneurons 2 -nspines 4 --by-neuron --c
 
 | Script | Description |
 |--------|-------------|
-| `h5_dataframe_to_h5_datasets_group.py` | Converts an older morphology-with-spines file (v0.1, spine table stored as pandas DataFrame) to the current format (v1.0, column-wise datasets). |
+| `h5_dataframe_to_h5_datasets_group.py` | Converts legacy morphology-with-spines files (v0.1, spine table stored as pandas DataFrame) to the current format (v1.0, column-wise datasets). Required for files created before morph-spines v1.0. |
 
 ### Example usage
 
