@@ -43,7 +43,6 @@ def validate_spine_table(spine_table: pd.DataFrame) -> None:
     Checks:
         - All mandatory columns are present.
         - Column dtypes are compatible with the expected types.
-        - No multidimensional data (each column must be 1D).
         - No unknown columns (only mandatory + optional columns are allowed).
 
     Args:
@@ -96,12 +95,8 @@ def validate_spine_table(spine_table: pd.DataFrame) -> None:
                 errors.append(
                     f"Column '{col_name}': expected signed integer type, got dtype '{col.dtype}'"
                 )
-
-    # Check that columns are 1D (no nested arrays)
-    for col_name in spine_table.columns:
-        col_data = spine_table[col_name].to_numpy()
-        if col_data.ndim != 1:
-            errors.append(f"Column '{col_name}': must be 1-dimensional, got shape {col_data.shape}")
+        else:
+            raise ValueError(f"Unknown expected dtype kind '{expected_kind}' for column '{col_name}'")
 
     if errors:
         raise ValueError("Spine table validation failed:\n  - " + "\n  - ".join(errors))

@@ -143,13 +143,14 @@ class TestValidateSpineTable:
         with pytest.raises(ValueError, match="Spine table validation failed"):
             validate_spine_table(df)
 
-    def test_ndim_check_with_multidimensional_column(self, valid_spine_table):
-        # Force a 2D array into a column via object dtype wrapping
-        valid_spine_table["afferent_surface_x"] = pd.array(
-            [np.array([1.0, 2.0]), np.array([3.0, 4.0]), np.array([5.0, 6.0])],
-            dtype=object,
-        )
-        with pytest.raises(ValueError, match="Spine table validation failed"):
+    def test_unknown_dtype_kind_in_schema_raises(self, valid_spine_table, monkeypatch):
+        """If h5_schema has an unrecognized dtype kind, validation raises immediately."""
+        from morph_spines.utils import morph_spine_writer
+
+        patched = {**morph_spine_writer.MANDATORY_COLUMNS, "afferent_surface_x": "bad_kind"}
+        monkeypatch.setattr(morph_spine_writer, "MANDATORY_COLUMNS", patched)
+
+        with pytest.raises(ValueError, match="Unknown expected dtype kind"):
             validate_spine_table(valid_spine_table)
 
 

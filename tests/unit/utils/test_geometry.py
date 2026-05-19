@@ -69,3 +69,40 @@ def test_inverse_transform_for_spine(
     )
 
     assert_allclose(spine_points_ref, spine_points[0])
+
+
+def test_inverse_transform_matrix_for_spine(
+    spine_rotation_ref, spine_translation_ref, spine_points_ref, spine_points_transformed_ref
+):
+    """The 4x4 inverse transform matrix should produce the same result as inverse_transform."""
+    matrix = geometry.inverse_transform_matrix_for_spine(
+        spine_rotation_ref, spine_translation_ref
+    )
+
+    # Apply the 4x4 matrix to the transformed point (in homogeneous coordinates)
+    point_h = np.append(spine_points_transformed_ref, 1.0)
+    result = matrix @ point_h
+
+    assert_allclose(result[:3], spine_points_ref, atol=1e-10)
+
+
+def test_inverse_transform_matrix_identity():
+    """Identity rotation and zero translation should give an identity matrix."""
+    rotation = Rotation.identity()
+    translation = np.zeros(3)
+
+    matrix = geometry.inverse_transform_matrix_for_spine(rotation, translation)
+
+    assert_allclose(matrix, np.eye(4), atol=1e-10)
+
+
+def test_transform_inverse_roundtrip(spine_rotation_ref, spine_translation_ref, spine_points_ref):
+    """Applying transform then inverse should return the original points."""
+    transformed = geometry.transform_for_spine(
+        spine_rotation_ref, spine_translation_ref, spine_points_ref
+    )
+    recovered = geometry.inverse_transform_for_spine(
+        spine_rotation_ref, spine_translation_ref, transformed
+    )
+
+    assert_allclose(recovered, spine_points_ref.reshape(1, -1), atol=1e-10)
