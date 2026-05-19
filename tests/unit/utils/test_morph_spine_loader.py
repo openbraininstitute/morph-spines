@@ -6,7 +6,6 @@ import pytest
 from morph_spines.core.h5_schema import GRP_EDGES, GRP_MORPH
 from morph_spines.utils.morph_spine_loader import (
     _is_datasets_group,
-    _is_pandas_dataframe_group,
     _resolve_morphology_name,
     load_spine_table,
 )
@@ -60,55 +59,6 @@ def test__resolve_morphology_name_invalid_file(tmp_path):
 
     with pytest.raises(ValueError):
         _resolve_morphology_name(str(f))
-
-
-def test__is_pandas_dataframe_group_true(tmp_path):
-    f = tmp_path / "test.h5"
-    df = pd.DataFrame([[1, 2], [3, 4]])
-    df.to_hdf(f, key="df", mode="w")
-
-    assert _is_pandas_dataframe_group(str(f), "df")
-
-
-def test__is_pandas_dataframe_group_true_with_version(tmp_path):
-    f = tmp_path / "test.h5"
-    df = pd.DataFrame([[1, 2], [3, 4]])
-    df.to_hdf(f, key="df", mode="w")
-
-    with h5py.File(f, "a") as h5:
-        root_grp = h5["df"]
-        metadata_grp = root_grp.create_group("metadata")
-        metadata_grp.attrs["version"] = np.array([0, 1], dtype=np.uint32)
-
-    assert _is_pandas_dataframe_group(str(f), "df")
-
-
-def test__is_pandas_dataframe_group_invalid(tmp_path):
-    f = tmp_path / "test.h5"
-    with h5py.File(f, "w") as h5:
-        h5.create_group("root_group")
-
-    with pytest.raises(TypeError):
-        _is_pandas_dataframe_group(str(f), "invalid_group")
-
-
-def test__is_pandas_dataframe_group_false(tmp_path):
-    f = tmp_path / "test.h5"
-    with h5py.File(f, "w") as h5:
-        grp = h5.create_group(GRP_EDGES)
-        morph_grp = grp.create_group("m1")
-        morph_grp.create_dataset("dataset", data=np.array([1, 2]))
-
-    assert not _is_pandas_dataframe_group(str(f), GRP_EDGES)
-
-
-def test__is_pandas_dataframe_group_false_no_group(tmp_path):
-    f = tmp_path / "test.h5"
-    with h5py.File(f, "w") as h5:
-        grp = h5.create_group("root_group")
-        grp.create_dataset("dataset", data=np.array([1, 2, 3, 4]))
-
-    assert not _is_pandas_dataframe_group(str(f), "root_group/dataset")
 
 
 def test__is_datasets_group_true_1dim_datasets(tmp_path):
@@ -185,29 +135,6 @@ def test__is_datasets_group_invalid(tmp_path):
         _is_datasets_group(str(f), "invalid_group")
 
 
-def test_load_spine_table_success(tmp_path):
-    df_ref = pd.DataFrame([[1, 2], [3, 4], [5, 6]], columns=["a", "b"])
-    f = tmp_path / "test.h5"
-    df_ref.to_hdf(str(f), key="/df_group")
-
-    df = load_spine_table(str(f), "df_group")
-
-    assert isinstance(df, pd.DataFrame)
-    assert len(df.columns) == len(df_ref.columns)
-    assert set(df.columns) == set(df_ref.columns)
-    assert df.loc[0, "a"] == df_ref.loc[0, "a"]
-    assert df.loc[1, "b"] == df_ref.loc[1, "b"]
-
-
-def test_load_spine_table_pandas_df(tmp_path):
-    f = tmp_path / "test.h5"
-    test_df = pd.DataFrame([[1, 2], [3, 4]])
-    test_df.to_hdf(f, key="df", mode="w")
-    df = load_spine_table(str(f), "df")
-
-    assert test_df.equals(df)
-
-
 def test_load_spine_table_scalar_datasets(tmp_path):
     f = tmp_path / "test.h5"
     with h5py.File(f, "w") as h5:
@@ -226,6 +153,7 @@ def test_load_spine_table_scalar_datasets(tmp_path):
 
 
 def test_load_spine_table_invalid(tmp_path):
+    """A non-group path should raise TypeError."""
     f = tmp_path / "test.h5"
     with h5py.File(f, "w") as h5:
         grp = h5.create_group(GRP_EDGES)
@@ -235,7 +163,20 @@ def test_load_spine_table_invalid(tmp_path):
         load_spine_table(str(f), f"{GRP_EDGES}/np_array")
 
 
-def test_load_spine_table_invalid_with_version01(tmp_path):
+def test_load_spine_table_no_metadata_group(tmp_path):
+    """A group without metadata should be treated as unsupported version 0.1."""
+    f = tmp_path / "test.h5"
+    with h5py.File(f, "w") as h5:
+        grp = h5.create_group(GRP_EDGES)
+        neuron_grp = grp.create_group("neuron_01")
+        neuron_grp.create_dataset("col_a", data=np.array([1, 2, 3]))
+
+    with pytest.raises(TypeError, match="Unsupported version"):
+        load_spine_table(str(f), f"{GRP_EDGES}/neuron_01")
+
+
+def test_load_spine_table_rejects_deprecated_pandas_format(tmp_path):
+    """Files with version 0.1 (pandas DF format) should be rejected with a helpful error."""
     f = tmp_path / "test.h5"
     with h5py.File(f, "w") as h5:
         grp = h5.create_group(GRP_EDGES)
@@ -243,7 +184,7 @@ def test_load_spine_table_invalid_with_version01(tmp_path):
         metadata_grp = grp.create_group("metadata")
         metadata_grp.attrs["version"] = np.array([0, 1], dtype=np.uint32)
 
-    with pytest.raises(TypeError):
+    with pytest.raises(TypeError, match="h5_dataframe_to_h5_datasets_group"):
         load_spine_table(str(f), f"{GRP_EDGES}")
 
 
