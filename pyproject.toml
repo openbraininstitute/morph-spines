@@ -8,13 +8,10 @@ dependencies = [
     'h5py>=3.10.0',
     'trimesh>=4.0.0',
     'neurom>=4.0.4',
-    'numpy',
-    'scipy',
-    'pandas',
-    'tables',
-    'morphio',
-    'pytest',
-    'pytest-cov'
+    'numpy>=1.24',
+    'scipy>=1.10',
+    'pandas>=2.0',
+    'morphio>=3.3',
 ]
 authors = [
     {name = "Open Brain Institute", email = "info@openbraininstitute.org"}
@@ -22,16 +19,27 @@ authors = [
 maintainers = [
     {name = "Open Brain Institute", email = "info@openbraininstitute.org"}
 ]
-description = "Package to load morphologies with spines"
+description = "Package to load and write morphologies with spines"
 readme = "README.md"
 requires-python = ">=3.11"
-license = {text = "my-license"}
+license = {text = "Apache-2.0"}
 classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "License :: OSI Approved :: Apache Software License",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
 ]
 dynamic = ["version"]
+
+[project.optional-dependencies]
+test = [
+    "pytest",
+    "pytest-cov",
+]
+conversion = [
+    "tables",
+]
 
 [project.urls]
 documentation = "https://morph-spines.readthedocs.io/en/stable"
