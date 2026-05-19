@@ -1,10 +1,10 @@
-"""Represents a neron morphology with spines.
+"""Represents the soma of a neuron morphology.
 
-Provides utility and data access to a representation of a
-neuron morphology with individual spines.
+Provides utility and data access to the soma mesh of a neuron.
 """
 
 import h5py
+import numpy as np
 import trimesh
 from numpy.typing import NDArray
 
@@ -21,6 +21,23 @@ class Soma:
         """
         self.name = morphology_name
         self._filepath = meshes_filepath
+        self._vertices: NDArray | None = None
+        self._triangles: NDArray | None = None
+
+    def _load_mesh_data(self) -> None:
+        """Load vertices and triangles from the H5 file and cache data."""
+        try:
+            with h5py.File(self._filepath, "r") as h5_file:
+                soma_grp = h5_file[GRP_SOMA][GRP_MESHES][self.name]
+                self._vertices = soma_grp[GRP_VERTICES][:].astype(float)
+                self._triangles = soma_grp[GRP_TRIANGLES][:].astype(int)
+        except KeyError as e:
+            raise ValueError(
+                f"Soma mesh not found for '{self.name}' in '{self._filepath}'. "
+                f"Expected path: /{GRP_SOMA}/{GRP_MESHES}/{self.name}"
+            ) from e
+        except OSError as e:
+            raise ValueError(f"Cannot open file '{self._filepath}': {e}") from e
 
     @property
     def soma_mesh_points(self) -> NDArray:
@@ -29,8 +46,9 @@ class Soma:
         The points (i.e., vertices) of the mesh describing the shape of
         the neuron soma.
         """
-        with h5py.File(self._filepath, "r") as h5_file:
-            return h5_file[GRP_SOMA][GRP_MESHES][self.name][GRP_VERTICES][:].astype(float)
+        if self._vertices is None:
+            self._load_mesh_data()
+        return self._vertices  # type: ignore[return-value]
 
     @property
     def soma_mesh_triangles(self) -> NDArray:
@@ -39,16 +57,16 @@ class Soma:
         The triangles (i.e., faces) of the mesh describing the shape of
         the neuron soma.
         """
-        with h5py.File(self._filepath, "r") as h5_file:
-            return h5_file[GRP_SOMA][GRP_MESHES][self.name][GRP_TRIANGLES][:].astype(int)
+        if self._triangles is None:
+            self._load_mesh_data()
+        return self._triangles  # type: ignore[return-value]
 
     @property
     def soma_mesh(self) -> trimesh.Trimesh:
         """Returns the mesh (as a trimesh.Trimesh) of the neuron soma."""
-        soma_mesh = trimesh.Trimesh(vertices=self.soma_mesh_points, faces=self.soma_mesh_triangles)
-        return soma_mesh
+        return trimesh.Trimesh(vertices=self.soma_mesh_points, faces=self.soma_mesh_triangles)
 
     @property
     def center(self) -> NDArray:
         """Returns the center of the soma mesh."""
-        return self.soma_mesh_points.mean(axis=0)
+        return np.mean(self.soma_mesh_points, axis=0)

@@ -75,3 +75,30 @@ def test_soma_mesh_points(soma, soma_vertices):
 
 def test_soma_mesh_triangles(soma, soma_triangles):
     assert_array_equal(soma.soma_mesh_triangles, soma_triangles)
+
+
+def test_soma_missing_group_raises(tmp_path):
+    """Accessing soma mesh when the H5 group doesn't exist raises ValueError."""
+    f = tmp_path / "empty.h5"
+    with h5py.File(f, "w") as h5:
+        h5.create_group("other_group")
+
+    soma = Soma(meshes_filepath=str(f), morphology_name="nonexistent")
+    with pytest.raises(ValueError, match="Soma mesh not found"):
+        _ = soma.soma_mesh_points
+
+
+def test_soma_invalid_file_raises(tmp_path):
+    """Accessing soma mesh with a non-existent file raises ValueError."""
+    soma = Soma(meshes_filepath=str(tmp_path / "does_not_exist.h5"), morphology_name="neuron_0")
+    with pytest.raises(ValueError, match="Cannot open file"):
+        _ = soma.soma_mesh_points
+
+
+def test_soma_caches_data(soma, soma_vertices, soma_triangles):
+    """Verify that repeated access uses cached data (no re-read)."""
+    # First access triggers load
+    _ = soma.soma_mesh_points
+    # Second access should use cache
+    assert_array_equal(soma.soma_mesh_points, soma_vertices)
+    assert_array_equal(soma.soma_mesh_triangles, soma_triangles)

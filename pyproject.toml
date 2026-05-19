@@ -8,13 +8,10 @@ dependencies = [
     'h5py>=3.10.0',
     'trimesh>=4.0.0',
     'neurom>=4.0.4',
-    'numpy',
-    'scipy',
-    'pandas',
-    'tables',
-    'morphio',
-    'pytest',
-    'pytest-cov'
+    'numpy>=1.24',
+    'scipy>=1.10',
+    'pandas>=2.0',
+    'morphio>=3.3',
 ]
 authors = [
     {name = "Open Brain Institute", email = "info@openbraininstitute.org"}
@@ -22,26 +19,52 @@ authors = [
 maintainers = [
     {name = "Open Brain Institute", email = "info@openbraininstitute.org"}
 ]
-description = "Package to load morphologies with spines"
+description = "Package to load and write morphologies with spines"
 readme = "README.md"
 requires-python = ">=3.11"
-license = {text = "my-license"}
+license = "Apache-2.0"
 classifiers = [
+    "Development Status :: 5 - Production/Stable",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
 ]
 dynamic = ["version"]
 
+[project.optional-dependencies]
+test = [
+    "pytest",
+    "pytest-cov",
+    "nbmake",
+]
+scripts = [
+    "tables",
+    "open3d; python_version < '3.13'",
+]
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "pytest-cov",
+    "ruff",
+    "mypy",
+]
+
 [project.urls]
-documentation = "https://morph-spines.readthedocs.io/en/stable"
 repository = "https://github.com/openbraininstitute/morph-spines"
-changelog = "https://github.com/openbraininstitute/morph-spines/CHANGELOG.rst"
+changelog = "https://github.com/openbraininstitute/morph-spines/blob/main/CHANGELOG.rst"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+morph_spines = ["py.typed"]
 
 [tool.setuptools_scm]
 local_scheme = "no-local-version"
 
 [tool.pytest.ini_options]
+testpaths = ["tests"]
 addopts = [
     "-vv",
     "-ra",
@@ -74,7 +97,7 @@ ignore = [
 convention = "google"
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*.py" = [
+"tests/**/*.py" = [
     "ANN",     # Missing type annotation
     "D",       # pydocstyle
     "ERA001",  # Found commented-out code

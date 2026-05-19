@@ -61,6 +61,19 @@ def test__resolve_morphology_name_invalid_file(tmp_path):
         _resolve_morphology_name(str(f))
 
 
+def test__resolve_morphology_name_nonexistent_file(tmp_path):
+    f = tmp_path / "does_not_exist.h5"
+    with pytest.raises(ValueError, match="Cannot open file"):
+        _resolve_morphology_name(str(f))
+
+
+def test__resolve_morphology_name_corrupt_file(tmp_path):
+    f = tmp_path / "corrupt.h5"
+    f.write_text("this is not an HDF5 file")
+    with pytest.raises(ValueError, match="Cannot open file"):
+        _resolve_morphology_name(str(f))
+
+
 def test__is_datasets_group_true_1dim_datasets(tmp_path):
     f = tmp_path / "test.h5"
     morph_name = "m1"

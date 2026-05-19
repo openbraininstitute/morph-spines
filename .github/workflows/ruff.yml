@@ -1,4 +1,4 @@
-# This workflow will perform linter checks with Ruff when a PR is created
+# This workflow will perform linter and format checks with Ruff when a PR is created
 
 name: Lint with Ruff
 
@@ -18,9 +18,15 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.x"
-    
-      - name: Install Ruff
-        run: pip install ruff
 
-      - name: Run Ruff
-        run: ruff check src tests
+      - name: Install uv
+        run: pip install uv
+
+      - name: Install dependencies
+        run: uv sync --dev
+
+      - name: Check formatting
+        run: uv run ruff format --check src tests
+
+      - name: Run linter
+        run: uv run ruff check src tests
