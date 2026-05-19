@@ -39,7 +39,7 @@ test = [
 ]
 scripts = [
     "tables",
-    "open3d",
+    "open3d; python_version < '3.13'",
 ]
 
 [dependency-groups]
