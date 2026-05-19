@@ -1,7 +1,6 @@
-"""Represents a neron morphology with spines.
+"""Represents the soma of a neuron morphology.
 
-Provides utility and data access to a representation of a
-neuron morphology with individual spines.
+Provides utility and data access to the soma mesh of a neuron.
 """
 
 import h5py
