@@ -12,6 +12,7 @@ from morph_spines.utils.morph_spine_loader import (
     load_morphology,
     load_morphology_with_spines,
     load_soma,
+    load_spine_table,
     load_spines,
 )
 from morph_spines.utils.morph_spine_writer import (
@@ -31,6 +32,7 @@ __all__ = [
     "load_morphology",
     "load_morphology_with_spines",
     "load_soma",
+    "load_spine_table",
     "load_spines",
     "validate_spine_table",
     "write_morphology",
