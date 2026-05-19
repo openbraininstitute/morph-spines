@@ -62,6 +62,7 @@ class Spines:
 
         if spine_meshes is not None and head_neck_offsets is None:
             import warnings
+
             warnings.warn(
                 "No head_neck_offsets provided, spine head/neck classification won't be available.",
                 stacklevel=2,
@@ -73,6 +74,7 @@ class Spines:
 
         if head_neck_offsets is not None and spine_meshes is None:
             import warnings
+
             warnings.warn(
                 "head_neck_offsets value will be ignored because spine_meshes were not provided.",
                 stacklevel=2,
