@@ -12,6 +12,7 @@ import sys
 from collections.abc import Iterator
 
 import h5py
+import numpy as np
 import pandas as pd
 from numpy.typing import NDArray
 
@@ -153,9 +154,9 @@ def convert_file(input_file: str, output_file: str) -> list[str]:
                 edges_in = f_in["edges"]
                 edges_out = f_out.create_group("edges")
 
-                # At the moment, /edges has only groups with pandas dataframes, but let's be
-                # generic, just in case there would be other groups: we need to copy all the groups
-                # that don't contain dataframes + convert the dataframes into group datasets
+                # Scan /edges for pandas dataframes to convert and other groups/datasets
+                # to copy as-is. Files may contain a mix of v0.1 (pandas) and v1.0 (datasets)
+                # spine tables.
                 to_copy: list[str] = []
                 pandas_groups, to_copy = scan_group_contents(edges_in, pandas_groups, to_copy)
 
@@ -170,6 +171,11 @@ def convert_file(input_file: str, output_file: str) -> list[str]:
                     df_in = df_in.to_frame() if isinstance(df_in, pd.Series) else df_in
                     dict_out = dataframe_to_array_list(df_in)
                     dset_group = edges_out.create_group(df_path)
+
+                    # Write version metadata (v1.0 format)
+                    metadata_grp = dset_group.create_group("metadata")
+                    metadata_grp.attrs["version"] = np.array([1, 0], dtype=np.uint32)
+
                     for col_name, col_data in dict_out.items():
                         dset_name = str(f"{dset_group.name}/{col_name}")
                         dset_group.create_dataset(dset_name, data=col_data)
@@ -196,7 +202,7 @@ def test_equal_dataframes(in_file: str, out_file: str, df_path: str) -> bool:
     False otherwise.
 
     """
-    in_spine_table = morph_spine_loader.load_spine_table(in_file, df_path).sort_index(axis=1)
+    in_spine_table = pd.read_hdf(in_file, key=df_path).sort_index(axis=1)
     out_spine_table = array_list_to_dataframe(out_file, df_path).sort_index(axis=1)
 
     if in_spine_table.equals(out_spine_table):
