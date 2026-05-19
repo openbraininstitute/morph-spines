@@ -37,14 +37,28 @@ test = [
     "pytest",
     "pytest-cov",
 ]
-conversion = [
+scripts = [
     "tables",
+    "open3d",
+]
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "pytest-cov",
+    "ruff",
+    "mypy",
 ]
 
 [project.urls]
-documentation = "https://morph-spines.readthedocs.io/en/stable"
 repository = "https://github.com/openbraininstitute/morph-spines"
-changelog = "https://github.com/openbraininstitute/morph-spines/CHANGELOG.rst"
+changelog = "https://github.com/openbraininstitute/morph-spines/blob/main/CHANGELOG.rst"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+morph_spines = ["py.typed"]
 
 [tool.setuptools_scm]
 local_scheme = "no-local-version"
@@ -82,7 +96,7 @@ ignore = [
 convention = "google"
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*.py" = [
+"tests/**/*.py" = [
     "ANN",     # Missing type annotation
     "D",       # pydocstyle
     "ERA001",  # Found commented-out code

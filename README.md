@@ -82,7 +82,7 @@ python scripts/h5_dataframe_to_h5_datasets_group.py old_file.h5 new_file.h5
 The conversion script requires the `tables` package:
 
 ```bash
-pip install morph-spines[conversion]
+pip install morph-spines[scripts]
 ```
 
 

@@ -41,3 +41,9 @@ python h5_dataframe_to_h5_datasets_group.py input.h5 output.h5
 | `reduce_soma_mesh.py` | Reduces the soma mesh inside a morphology-with-spines H5 file to 10% of its original size. |
 
 These scripts require `open3d` which is not a dependency of the main package.
+
+All script dependencies can be installed with:
+
+```bash
+pip install morph-spines[scripts]
+```
