@@ -15,6 +15,7 @@ from morph_spines.utils.morph_spine_loader import (
     load_spine_table,
     load_spines,
 )
+from morph_spines.utils.morph_spine_merger import merge_morphologies_with_spines
 from morph_spines.utils.morph_spine_writer import (
     validate_spine_table,
     write_morphology,
@@ -34,6 +35,7 @@ __all__ = [
     "load_soma",
     "load_spine_table",
     "load_spines",
+    "merge_morphologies_with_spines",
     "validate_spine_table",
     "write_morphology",
     "write_soma_mesh",
