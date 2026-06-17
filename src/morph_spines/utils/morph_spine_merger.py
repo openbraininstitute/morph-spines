@@ -12,8 +12,6 @@ from pathlib import Path
 import h5py
 import numpy as np
 
-L = logging.getLogger(__name__)
-
 from morph_spines.core.h5_schema import (
     COL_SPINE_MORPH,
     GRP_EDGES,
@@ -23,6 +21,8 @@ from morph_spines.core.h5_schema import (
     GRP_SOMA,
     GRP_SPINES,
 )
+
+L = logging.getLogger(__name__)
 
 
 def merge_morphologies_with_spines(
