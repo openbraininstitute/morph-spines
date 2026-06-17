@@ -217,12 +217,9 @@ def _copy_spines_table(
 
     dt = h5py.string_dtype(encoding="utf-8")
     for ds_name in src_grp:
-        if isinstance(src_grp[ds_name], h5py.Group):
-            # Metadata subgroup
-            h5_in.copy(src_grp[ds_name], dst_grp, name=ds_name)
-        elif ds_name == COL_SPINE_MORPH and needs_update:
+        if ds_name == COL_SPINE_MORPH and needs_update:
             # spine_morphology entry, only if it needs to be updated
             dst_grp.create_dataset(COL_SPINE_MORPH, data=spine_morph_values, dtype=dt)
         else:
-            # The rest of the spines table is copied as-is
+            # The rest of the spines table is copied as-is, including metadata group
             h5_in.copy(src_grp[ds_name], dst_grp, name=ds_name)
