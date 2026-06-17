@@ -6,10 +6,13 @@ spine_morphology entry in the spines tables is updated automatically to
 reflect any renamed groups.
 """
 
+import logging
 from pathlib import Path
 
 import h5py
 import numpy as np
+
+L = logging.getLogger(__name__)
 
 from morph_spines.core.h5_schema import (
     COL_SPINE_MORPH,
@@ -76,10 +79,15 @@ def merge_morphologies_with_spines(
             file_name_maps[path] = {}
         file_name_maps[path][name] = dest
 
+    L.info("Merging %d source file(s) into %s", len(source_files), output_path)
+
     with h5py.File(output_path, "w") as h5_out:
-        for src_path in source_files:
+        for i, src_path in enumerate(source_files, 1):
+            L.info("Processing file %d/%d: %s", i, len(source_files), src_path)
             with h5py.File(src_path, "r") as h5_in:
                 _copy_source_file(h5_in, h5_out, file_name_maps.get(src_path, {}), include_meshes)
+
+    L.info("Merge complete: %s", output_path)
 
 
 def _validate_sources(
