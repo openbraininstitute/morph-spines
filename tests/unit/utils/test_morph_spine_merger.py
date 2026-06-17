@@ -1,5 +1,6 @@
 """Unit tests for morph_spines.utils.morph_spine_merger."""
 
+import warnings
 from pathlib import Path
 
 import h5py
@@ -424,3 +425,32 @@ class TestEdgeCases:
         with h5py.File(output, "r") as h5:
             assert set(h5[GRP_MORPH].keys()) == {"neuron_A", "neuron_B"}
             assert "shared" in h5[f"{GRP_SPINES}/{GRP_SKELETONS}"]
+
+
+class TestUnusedRenameMapWarning:
+    def test_unused_entry_emits_warning(self, tmp_path):
+        """A rename_map key that doesn't match any source name emits a warning."""
+        src = tmp_path / "src.h5"
+        _create_source_file(src, "neuron_A")
+        output = tmp_path / "out.h5"
+
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            merge_morphologies_with_spines(
+                [src], output, rename_map={(src, "nonexistent"): "whatever"}
+            )
+
+        assert len(caught) == 1
+        assert "not found in source files" in str(caught[0].message)
+
+    def test_no_warning_when_all_entries_used(self, tmp_path):
+        """No warning when every rename_map key matches a source name."""
+        src = tmp_path / "src.h5"
+        _create_source_file(src, "neuron_A")
+        output = tmp_path / "out.h5"
+
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            merge_morphologies_with_spines([src], output, rename_map={(src, "neuron_A"): "renamed"})
+
+        assert len(caught) == 0

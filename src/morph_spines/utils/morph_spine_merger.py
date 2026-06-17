@@ -7,6 +7,7 @@ reflect any renamed groups.
 """
 
 import logging
+import warnings
 from pathlib import Path
 
 import h5py
@@ -102,6 +103,7 @@ def _validate_sources(
     """Validate source file format and check for destination name collisions."""
     morph_dest_names: list[str] = []
     spine_dest_names: list[str] = []
+    valid_keys: set[tuple[Path, str]] = set()
 
     for src_path in source_files:
         with h5py.File(src_path, "r") as h5:
@@ -130,13 +132,25 @@ def _validate_sources(
                         f"not found in /{GRP_SPINES}/{GRP_SKELETONS} of {src_path}"
                     )
 
-            # Collect all destination names for this file
-            morph_dest_names.extend(rename_map.get((src_path, k), k) for k in h5[GRP_MORPH].keys())
-            spine_dest_names.extend(rename_map.get((src_path, k), k) for k in skeletons_grp.keys())
+            # Collect valid keys and destination names for this file
+            for k in h5[GRP_MORPH].keys():
+                valid_keys.add((src_path, k))
+                morph_dest_names.append(rename_map.get((src_path, k), k))
+            for k in skeletons_grp.keys():
+                valid_keys.add((src_path, k))
+                spine_dest_names.append(rename_map.get((src_path, k), k))
 
     # Check uniqueness
     _check_duplicates(morph_dest_names, "morphology")
     _check_duplicates(spine_dest_names, "spines library")
+
+    # Warn about unused rename_map entries (do not match any name in the source files)
+    unused = set(rename_map.keys()) - valid_keys
+    if unused:
+        warnings.warn(
+            f"rename_map contains entries not found in source files: {sorted(unused)}",
+            stacklevel=3,
+        )
 
 
 def _check_duplicates(names: list[str], label: str) -> None:
