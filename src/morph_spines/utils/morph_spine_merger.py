@@ -65,10 +65,15 @@ def merge_morphologies_with_spines(
     """
     if not source_files:
         raise ValueError("source_files must not be empty")
+
+    # Normalize paths so str vs Path mismatches don't cause silent rename_map misses
+    source_files = [Path(p) for p in source_files]
+    output_path = Path(output_path)
+
     if output_path.exists():
         raise FileExistsError(f"Output file already exists: {output_path}")
 
-    rename_map = rename_map or {}
+    rename_map = {(Path(p), name): dest for (p, name), dest in (rename_map or {}).items()}
 
     _validate_sources(source_files, rename_map)
 
