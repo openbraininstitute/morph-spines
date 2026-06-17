@@ -40,6 +40,38 @@ write_morphology("output.h5", "neuron_01", points, structure)
 write_soma_mesh("output.h5", "neuron_01", vertices, triangles)
 ```
 
+### Merging
+
+```python
+from pathlib import Path
+from morph_spines import merge_morphologies_with_spines
+
+# Merge multiple files without renaming
+merge_morphologies_with_spines(
+    source_files=[Path("neuron_A.h5"), Path("neuron_B.h5")],
+    output_path=Path("merged.h5"),
+)
+
+# Merge with renaming (neuron keys and/or spines library names)
+src1 = Path("neuron_A.h5")
+src2 = Path("neuron_B.h5")
+merge_morphologies_with_spines(
+    source_files=[src1, src2],
+    output_path=Path("merged.h5"),
+    rename_map={
+        (src1, "morph_001"): "circuit_neuron_42",
+        (src2, "morph_001"): "circuit_neuron_43",
+    },
+)
+
+# Merge without meshes (smaller output)
+merge_morphologies_with_spines(
+    source_files=[Path("a.h5"), Path("b.h5")],
+    output_path=Path("merged_no_meshes.h5"),
+    include_meshes=False,
+)
+```
+
 
 ## Installation
 
@@ -59,6 +91,8 @@ pip install -e ".[test]"
 ## Features
 
 - Load and write neuron morphologies with spine data from/to HDF5 files
+- Merge multiple morph-with-spines files into one, with optional renaming of neuron keys and
+  spines library names
 - Access the spine table with per-spine properties (position, orientation, section placement)
 - Access spine skeletons (via NeuroM/MorphIO) and meshes (via trimesh)
 - Write spine tables, morphologies, soma meshes, spine meshes, and spine skeletons
