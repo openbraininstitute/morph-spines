@@ -15,6 +15,10 @@ from morph_spines.utils.morph_spine_loader import (
     load_spine_table,
     load_spines,
 )
+from morph_spines.utils.morph_spine_validator import (
+    ValidationResult,
+    validate_morph_with_spines_file,
+)
 from morph_spines.utils.morph_spine_writer import (
     validate_spine_table,
     write_morphology,
@@ -29,11 +33,13 @@ __all__ = [
     "SpineType",
     "Spines",
     "MorphologyWithSpines",
+    "ValidationResult",
     "load_morphology",
     "load_morphology_with_spines",
     "load_soma",
     "load_spine_table",
     "load_spines",
+    "validate_morph_with_spines_file",
     "validate_spine_table",
     "write_morphology",
     "write_soma_mesh",

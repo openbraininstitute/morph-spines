@@ -40,6 +40,21 @@ write_morphology("output.h5", "neuron_01", points, structure)
 write_soma_mesh("output.h5", "neuron_01", vertices, triangles)
 ```
 
+### Validation
+
+```python
+from morph_spines import validate_morph_with_spines_file
+
+# Check file structure only (groups, datasets, metadata)
+result = validate_morph_with_spines_file("neuron.h5")
+
+# Also check data integrity (shapes, dtypes, value ranges, cross-references)
+result = validate_morph_with_spines_file("neuron.h5", check_data_integrity=True)
+
+print(result)          # Human-readable summary
+assert result.is_valid # Use programmatically
+```
+
 
 ## Installation
 
@@ -63,6 +78,7 @@ pip install -e ".[test]"
 - Access spine skeletons (via NeuroM/MorphIO) and meshes (via trimesh)
 - Write spine tables, morphologies, soma meshes, spine meshes, and spine skeletons
 - Validate spine tables against the format specification before writing
+- Validate entire morph-with-spines files (structure and optionally data integrity)
 - Head/neck triangle classification with filtering (`include_head`, `include_neck`)
 - Support for branched spines with multiple heads
 - Spine type classification (thin, mushroom, stubby, filopodium, branched, etc.)
