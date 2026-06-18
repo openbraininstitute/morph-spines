@@ -529,7 +529,9 @@ def _validate_spines_meshes(meshes_grp: h5py.Group, check_data_integrity: bool) 
 
 
 def _validate_mesh_datasets(
-    grp: h5py.Group, path: str, result: ValidationResult,
+    grp: h5py.Group,
+    path: str,
+    result: ValidationResult,
     check_global_indices: bool = True,
 ) -> None:
     """Validate vertices and triangles datasets within a mesh group.
@@ -552,10 +554,7 @@ def _validate_mesh_datasets(
         vertices = grp[GRP_VERTICES]
         if isinstance(vertices, h5py.Dataset):
             if vertices.ndim != 2 or vertices.shape[1] != 3:
-                result.add_error(
-                    f"{path}/vertices: expected shape (N, 3), "
-                    f"got {vertices.shape}"
-                )
+                result.add_error(f"{path}/vertices: expected shape (N, 3), got {vertices.shape}")
             else:
                 n_vertices = vertices.shape[0]
                 data = vertices[:]
@@ -568,24 +567,18 @@ def _validate_mesh_datasets(
         triangles = grp[GRP_TRIANGLES]
         if isinstance(triangles, h5py.Dataset):
             if triangles.ndim != 2 or triangles.shape[1] != 3:
-                result.add_error(
-                    f"{path}/triangles: expected shape (M, 3), "
-                    f"got {triangles.shape}"
-                )
+                result.add_error(f"{path}/triangles: expected shape (M, 3), got {triangles.shape}")
             else:
                 tri_data = triangles[:]
                 if np.any(tri_data < 0):
-                    result.add_error(
-                        f"{path}/triangles: contains negative indices"
-                    )
+                    result.add_error(f"{path}/triangles: contains negative indices")
                 elif (
                     check_global_indices
                     and n_vertices is not None
                     and np.any(tri_data >= n_vertices)
                 ):
                     result.add_error(
-                        f"{path}/triangles: contains indices >= "
-                        f"vertex count ({n_vertices})"
+                        f"{path}/triangles: contains indices >= vertex count ({n_vertices})"
                     )
 
 
@@ -674,9 +667,7 @@ def _validate_soma_group(soma_grp: h5py.Group, check_data_integrity: bool) -> Va
             result.add_error(f"/soma/meshes/{name}: missing '{GRP_TRIANGLES}' dataset")
 
         if check_data_integrity:
-            _validate_mesh_datasets(
-                item, f"/soma/meshes/{name}", result
-            )
+            _validate_mesh_datasets(item, f"/soma/meshes/{name}", result)
 
     return result
 

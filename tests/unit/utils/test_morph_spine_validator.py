@@ -14,7 +14,6 @@ from morph_spines.core.h5_schema import (
     GRP_SPINES,
     GRP_TRIANGLES,
     GRP_VERTICES,
-    SPINE_TABLE_VER_H5_DATASETS,
 )
 from morph_spines.utils.morph_spine_validator import (
     ValidationResult,
@@ -57,9 +56,7 @@ class TestFileLevelChecks:
         """Valid file passes with data integrity checks enabled."""
         filepath = tmp_path / "valid.h5"
         write_minimal_valid_file(filepath)
-        result = validate_morph_with_spines_file(
-            filepath, check_data_integrity=True
-        )
+        result = validate_morph_with_spines_file(filepath, check_data_integrity=True)
         assert result.is_valid
         assert result.data_integrity_checked
 
@@ -77,9 +74,7 @@ class TestFileLevelChecks:
             h5.create_group("unexpected_group")
         result = validate_morph_with_spines_file(filepath)
         assert result.is_valid
-        assert any(
-            "unexpected_group" in w for w in result.warnings
-        )
+        assert any("unexpected_group" in w for w in result.warnings)
 
 
 class TestMorphologyGroup:
@@ -116,9 +111,7 @@ class TestMorphologyGroup:
                 "points",
                 data=np.ones((3, 3), dtype=np.float32),
             )
-        result = validate_morph_with_spines_file(
-            filepath, check_data_integrity=True
-        )
+        result = validate_morph_with_spines_file(filepath, check_data_integrity=True)
         assert not result.is_valid
         assert any("shape (N, 4)" in e for e in result.errors)
 
@@ -133,9 +126,7 @@ class TestMorphologyGroup:
                 "points",
                 data=np.ones((3, 4), dtype=np.float64),
             )
-        result = validate_morph_with_spines_file(
-            filepath, check_data_integrity=True
-        )
+        result = validate_morph_with_spines_file(filepath, check_data_integrity=True)
         assert result.is_valid
         assert any("float32" in w for w in result.warnings)
 
@@ -149,9 +140,7 @@ class TestMorphologyGroup:
             data = np.ones((3, 4), dtype=np.float32)
             data[1, 2] = np.nan
             grp.create_dataset("points", data=data)
-        result = validate_morph_with_spines_file(
-            filepath, check_data_integrity=True
-        )
+        result = validate_morph_with_spines_file(filepath, check_data_integrity=True)
         assert not result.is_valid
         assert any("NaN" in e for e in result.errors)
 
@@ -176,9 +165,7 @@ class TestMorphologyGroup:
                 "structure",
                 data=np.ones((3, 2), dtype=np.int32),
             )
-        result = validate_morph_with_spines_file(
-            filepath, check_data_integrity=True
-        )
+        result = validate_morph_with_spines_file(filepath, check_data_integrity=True)
         assert not result.is_valid
         assert any("shape (M, 3)" in e for e in result.errors)
 
@@ -192,9 +179,7 @@ class TestMorphologyGroup:
             data = np.ones((3, 4), dtype=np.float32)
             data[0, 0] = np.inf
             grp.create_dataset("points", data=data)
-        result = validate_morph_with_spines_file(
-            filepath, check_data_integrity=True
-        )
+        result = validate_morph_with_spines_file(filepath, check_data_integrity=True)
         assert not result.is_valid
         assert any("Inf" in e for e in result.errors)
 
@@ -209,9 +194,7 @@ class TestMorphologyGroup:
                 "points",
                 data=np.empty((0, 4), dtype=np.float32),
             )
-        result = validate_morph_with_spines_file(
-            filepath, check_data_integrity=True
-        )
+        result = validate_morph_with_spines_file(filepath, check_data_integrity=True)
         assert not result.is_valid
         assert any("empty" in e for e in result.errors)
 
@@ -226,23 +209,17 @@ class TestMorphologyGroup:
                 "structure",
                 data=np.empty((0, 3), dtype=np.int32),
             )
-        result = validate_morph_with_spines_file(
-            filepath, check_data_integrity=True
-        )
+        result = validate_morph_with_spines_file(filepath, check_data_integrity=True)
         assert not result.is_valid
         assert any("empty" in e for e in result.errors)
 
-    def test_morphology_entry_is_dataset_not_group(
-        self, tmp_path
-    ):
+    def test_morphology_entry_is_dataset_not_group(self, tmp_path):
         """A dataset instead of group under /morphology errors."""
         filepath = tmp_path / "test.h5"
         write_minimal_valid_file(filepath)
         with h5py.File(filepath, "a") as h5:
             del h5[f"{GRP_MORPH}/{NEURON_NAME}"]
-            h5[GRP_MORPH].create_dataset(
-                NEURON_NAME, data=np.zeros(3)
-            )
+            h5[GRP_MORPH].create_dataset(NEURON_NAME, data=np.zeros(3))
         result = validate_morph_with_spines_file(filepath)
         assert not result.is_valid
         assert any("not a group" in e for e in result.errors)
@@ -277,9 +254,7 @@ class TestEdgesGroup:
         write_minimal_valid_file(filepath)
         with h5py.File(filepath, "a") as h5:
             grp = h5[f"{GRP_EDGES}/{NEURON_NAME}"]
-            grp.create_dataset(
-                "unknown_col", data=np.zeros(3)
-            )
+            grp.create_dataset("unknown_col", data=np.zeros(3))
         result = validate_morph_with_spines_file(filepath)
         assert result.is_valid
         assert any("unknown_col" in w for w in result.warnings)
@@ -289,12 +264,8 @@ class TestEdgesGroup:
         filepath = tmp_path / "test.h5"
         write_minimal_valid_file(filepath)
         with h5py.File(filepath, "a") as h5:
-            meta = h5[
-                f"{GRP_EDGES}/{NEURON_NAME}/{GRP_METADATA}"
-            ]
-            meta.attrs[ATT_VERSION] = np.array(
-                [99, 0], dtype=np.uint32
-            )
+            meta = h5[f"{GRP_EDGES}/{NEURON_NAME}/{GRP_METADATA}"]
+            meta.attrs[ATT_VERSION] = np.array([99, 0], dtype=np.uint32)
         result = validate_morph_with_spines_file(filepath)
         assert not result.is_valid
         assert any("version" in e for e in result.errors)
@@ -308,13 +279,9 @@ class TestEdgesGroup:
             del grp["afferent_section_pos"]
             grp.create_dataset(
                 "afferent_section_pos",
-                data=np.array(
-                    [0.5, 1.5, -0.1], dtype=np.float64
-                ),
+                data=np.array([0.5, 1.5, -0.1], dtype=np.float64),
             )
-        result = validate_morph_with_spines_file(
-            filepath, check_data_integrity=True
-        )
+        result = validate_morph_with_spines_file(filepath, check_data_integrity=True)
         assert not result.is_valid
         assert any("outside" in e for e in result.errors)
 
@@ -327,13 +294,9 @@ class TestEdgesGroup:
             del grp["spine_length"]
             grp.create_dataset(
                 "spine_length",
-                data=np.array(
-                    [1.0, 0.0, -0.5], dtype=np.float64
-                ),
+                data=np.array([1.0, 0.0, -0.5], dtype=np.float64),
             )
-        result = validate_morph_with_spines_file(
-            filepath, check_data_integrity=True
-        )
+        result = validate_morph_with_spines_file(filepath, check_data_integrity=True)
         assert not result.is_valid
         assert any("<= 0" in e for e in result.errors)
 
@@ -346,19 +309,13 @@ class TestEdgesGroup:
             del grp["afferent_segment_offset"]
             grp.create_dataset(
                 "afferent_segment_offset",
-                data=np.array(
-                    [0.1, -0.5, 0.3], dtype=np.float64
-                ),
+                data=np.array([0.1, -0.5, 0.3], dtype=np.float64),
             )
-        result = validate_morph_with_spines_file(
-            filepath, check_data_integrity=True
-        )
+        result = validate_morph_with_spines_file(filepath, check_data_integrity=True)
         assert not result.is_valid
         assert any("negative" in e for e in result.errors)
 
-    def test_spine_morphology_invalid_reference(
-        self, tmp_path
-    ):
+    def test_spine_morphology_invalid_reference(self, tmp_path):
         """spine_morphology referencing nonexistent group."""
         filepath = tmp_path / "test.h5"
         write_minimal_valid_file(filepath)
@@ -368,19 +325,12 @@ class TestEdgesGroup:
             dt = h5py.string_dtype(encoding="utf-8")
             grp.create_dataset(
                 "spine_morphology",
-                data=np.array(
-                    ["nonexistent_group"] * 3, dtype=object
-                ),
+                data=np.array(["nonexistent_group"] * 3, dtype=object),
                 dtype=dt,
             )
-        result = validate_morph_with_spines_file(
-            filepath, check_data_integrity=True
-        )
+        result = validate_morph_with_spines_file(filepath, check_data_integrity=True)
         assert not result.is_valid
-        assert any(
-            "nonexistent_group" in e or "not in" in e
-            for e in result.errors
-        )
+        assert any("nonexistent_group" in e or "not in" in e for e in result.errors)
 
     def test_empty_edges_group(self, tmp_path):
         """Empty /edges group reports error."""
@@ -403,14 +353,9 @@ class TestEdgesGroup:
                 "spine_length",
                 data=np.array([1.0, 2.0], dtype=np.float64),
             )
-        result = validate_morph_with_spines_file(
-            filepath, check_data_integrity=True
-        )
+        result = validate_morph_with_spines_file(filepath, check_data_integrity=True)
         assert not result.is_valid
-        assert any(
-            "inconsistent lengths" in e
-            for e in result.errors
-        )
+        assert any("inconsistent lengths" in e for e in result.errors)
 
     def test_nan_in_float_column(self, tmp_path):
         """NaN in float column reports error."""
@@ -419,15 +364,9 @@ class TestEdgesGroup:
         with h5py.File(filepath, "a") as h5:
             grp = h5[f"{GRP_EDGES}/{NEURON_NAME}"]
             del grp["afferent_surface_x"]
-            data = np.array(
-                [1.0, np.nan, 3.0], dtype=np.float64
-            )
-            grp.create_dataset(
-                "afferent_surface_x", data=data
-            )
-        result = validate_morph_with_spines_file(
-            filepath, check_data_integrity=True
-        )
+            data = np.array([1.0, np.nan, 3.0], dtype=np.float64)
+            grp.create_dataset("afferent_surface_x", data=data)
+        result = validate_morph_with_spines_file(filepath, check_data_integrity=True)
         assert not result.is_valid
         assert any("NaN" in e for e in result.errors)
 
@@ -438,15 +377,9 @@ class TestEdgesGroup:
         with h5py.File(filepath, "a") as h5:
             grp = h5[f"{GRP_EDGES}/{NEURON_NAME}"]
             del grp["afferent_surface_y"]
-            data = np.array(
-                [1.0, np.inf, 3.0], dtype=np.float64
-            )
-            grp.create_dataset(
-                "afferent_surface_y", data=data
-            )
-        result = validate_morph_with_spines_file(
-            filepath, check_data_integrity=True
-        )
+            data = np.array([1.0, np.inf, 3.0], dtype=np.float64)
+            grp.create_dataset("afferent_surface_y", data=data)
+        result = validate_morph_with_spines_file(filepath, check_data_integrity=True)
         assert not result.is_valid
         assert any("Inf" in e for e in result.errors)
 
@@ -460,42 +393,30 @@ class TestEdgesGroup:
             dt = h5py.string_dtype(encoding="utf-8")
             grp.create_dataset(
                 "afferent_section_id",
-                data=np.array(
-                    ["a", "b", "c"], dtype=object
-                ),
+                data=np.array(["a", "b", "c"], dtype=object),
                 dtype=dt,
             )
-        result = validate_morph_with_spines_file(
-            filepath, check_data_integrity=True
-        )
+        result = validate_morph_with_spines_file(filepath, check_data_integrity=True)
         assert not result.is_valid
         assert any("integer" in e for e in result.errors)
 
-    def test_edges_entry_is_dataset_not_group(
-        self, tmp_path
-    ):
+    def test_edges_entry_is_dataset_not_group(self, tmp_path):
         """A dataset instead of group under /edges errors."""
         filepath = tmp_path / "test.h5"
         write_minimal_valid_file(filepath)
         with h5py.File(filepath, "a") as h5:
             del h5[f"{GRP_EDGES}/{NEURON_NAME}"]
-            h5[GRP_EDGES].create_dataset(
-                NEURON_NAME, data=np.zeros(3)
-            )
+            h5[GRP_EDGES].create_dataset(NEURON_NAME, data=np.zeros(3))
         result = validate_morph_with_spines_file(filepath)
         assert not result.is_valid
         assert any("not a group" in e for e in result.errors)
 
-    def test_edges_metadata_missing_version_attr(
-        self, tmp_path
-    ):
+    def test_edges_metadata_missing_version_attr(self, tmp_path):
         """Metadata group without version attribute errors."""
         filepath = tmp_path / "test.h5"
         write_minimal_valid_file(filepath)
         with h5py.File(filepath, "a") as h5:
-            meta = h5[
-                f"{GRP_EDGES}/{NEURON_NAME}/{GRP_METADATA}"
-            ]
+            meta = h5[f"{GRP_EDGES}/{NEURON_NAME}/{GRP_METADATA}"]
             del meta.attrs[ATT_VERSION]
         result = validate_morph_with_spines_file(filepath)
         assert not result.is_valid
@@ -540,19 +461,14 @@ class TestSpinesGroup:
         filepath = tmp_path / "test.h5"
         write_minimal_valid_file(filepath)
         with h5py.File(filepath, "a") as h5:
-            skel_path = (
-                f"{GRP_SPINES}/{GRP_SKELETONS}"
-                f"/{SPINE_MORPH_NAME}"
-            )
+            skel_path = f"{GRP_SPINES}/{GRP_SKELETONS}/{SPINE_MORPH_NAME}"
             grp = h5[skel_path]
             del grp["points"]
             grp.create_dataset(
                 "points",
                 data=np.ones((5, 3), dtype=np.float32),
             )
-        result = validate_morph_with_spines_file(
-            filepath, check_data_integrity=True
-        )
+        result = validate_morph_with_spines_file(filepath, check_data_integrity=True)
         assert not result.is_valid
         assert any("shape (N, 4)" in e for e in result.errors)
 
@@ -561,10 +477,7 @@ class TestSpinesGroup:
         filepath = tmp_path / "test.h5"
         write_minimal_valid_file(filepath)
         with h5py.File(filepath, "a") as h5:
-            mesh_path = (
-                f"{GRP_SPINES}/{GRP_MESHES}"
-                f"/{SPINE_MORPH_NAME}"
-            )
+            mesh_path = f"{GRP_SPINES}/{GRP_MESHES}/{SPINE_MORPH_NAME}"
             del h5[f"{mesh_path}/{GRP_OFFSETS}"]
         result = validate_morph_with_spines_file(filepath)
         assert not result.is_valid
@@ -575,20 +488,13 @@ class TestSpinesGroup:
         filepath = tmp_path / "test.h5"
         write_minimal_valid_file(filepath)
         with h5py.File(filepath, "a") as h5:
-            mesh_path = (
-                f"{GRP_SPINES}/{GRP_MESHES}"
-                f"/{SPINE_MORPH_NAME}"
-            )
+            mesh_path = f"{GRP_SPINES}/{GRP_MESHES}/{SPINE_MORPH_NAME}"
             grp = h5[mesh_path]
             del grp[GRP_VERTICES]
             data = np.ones((9, 3), dtype=np.float32)
             data[2, 1] = np.nan
-            grp.create_dataset(
-                GRP_VERTICES, data=data, compression="gzip"
-            )
-        result = validate_morph_with_spines_file(
-            filepath, check_data_integrity=True
-        )
+            grp.create_dataset(GRP_VERTICES, data=data, compression="gzip")
+        result = validate_morph_with_spines_file(filepath, check_data_integrity=True)
         assert not result.is_valid
         assert any("NaN" in e for e in result.errors)
 
@@ -597,10 +503,7 @@ class TestSpinesGroup:
         filepath = tmp_path / "test.h5"
         write_minimal_valid_file(filepath)
         with h5py.File(filepath, "a") as h5:
-            mesh_path = (
-                f"{GRP_SPINES}/{GRP_MESHES}"
-                f"/{SPINE_MORPH_NAME}"
-            )
+            mesh_path = f"{GRP_SPINES}/{GRP_MESHES}/{SPINE_MORPH_NAME}"
             grp = h5[mesh_path]
             del grp[GRP_VERTICES]
             grp.create_dataset(
@@ -608,9 +511,7 @@ class TestSpinesGroup:
                 data=np.ones((9, 2), dtype=np.float32),
                 compression="gzip",
             )
-        result = validate_morph_with_spines_file(
-            filepath, check_data_integrity=True
-        )
+        result = validate_morph_with_spines_file(filepath, check_data_integrity=True)
         assert not result.is_valid
         assert any("shape (N, 3)" in e for e in result.errors)
 
@@ -619,10 +520,7 @@ class TestSpinesGroup:
         filepath = tmp_path / "test.h5"
         write_minimal_valid_file(filepath)
         with h5py.File(filepath, "a") as h5:
-            mesh_path = (
-                f"{GRP_SPINES}/{GRP_MESHES}"
-                f"/{SPINE_MORPH_NAME}"
-            )
+            mesh_path = f"{GRP_SPINES}/{GRP_MESHES}/{SPINE_MORPH_NAME}"
             grp = h5[mesh_path]
             del grp[GRP_TRIANGLES]
             grp.create_dataset(
@@ -630,9 +528,7 @@ class TestSpinesGroup:
                 data=np.ones((3, 4), dtype=np.int32),
                 compression="gzip",
             )
-        result = validate_morph_with_spines_file(
-            filepath, check_data_integrity=True
-        )
+        result = validate_morph_with_spines_file(filepath, check_data_integrity=True)
         assert not result.is_valid
         assert any("shape (M, 3)" in e for e in result.errors)
 
@@ -641,10 +537,7 @@ class TestSpinesGroup:
         filepath = tmp_path / "test.h5"
         write_minimal_valid_file(filepath)
         with h5py.File(filepath, "a") as h5:
-            mesh_path = (
-                f"{GRP_SPINES}/{GRP_MESHES}"
-                f"/{SPINE_MORPH_NAME}"
-            )
+            mesh_path = f"{GRP_SPINES}/{GRP_MESHES}/{SPINE_MORPH_NAME}"
             grp = h5[mesh_path]
             del grp[GRP_TRIANGLES]
             # Each spine has 3 local vertices; index 5 is OOB
@@ -656,23 +549,16 @@ class TestSpinesGroup:
                 ),
                 compression="gzip",
             )
-        result = validate_morph_with_spines_file(
-            filepath, check_data_integrity=True
-        )
+        result = validate_morph_with_spines_file(filepath, check_data_integrity=True)
         assert not result.is_valid
-        assert any(
-            "local vertex count" in e for e in result.errors
-        )
+        assert any("local vertex count" in e for e in result.errors)
 
     def test_offsets_wrong_shape(self, tmp_path):
         """Offsets with shape (4,4) reports shape error."""
         filepath = tmp_path / "test.h5"
         write_minimal_valid_file(filepath)
         with h5py.File(filepath, "a") as h5:
-            mesh_path = (
-                f"{GRP_SPINES}/{GRP_MESHES}"
-                f"/{SPINE_MORPH_NAME}"
-            )
+            mesh_path = f"{GRP_SPINES}/{GRP_MESHES}/{SPINE_MORPH_NAME}"
             grp = h5[mesh_path]
             del grp[GRP_OFFSETS]
             grp.create_dataset(
@@ -680,9 +566,7 @@ class TestSpinesGroup:
                 data=np.ones((4, 4), dtype=np.int32),
                 compression="gzip",
             )
-        result = validate_morph_with_spines_file(
-            filepath, check_data_integrity=True
-        )
+        result = validate_morph_with_spines_file(filepath, check_data_integrity=True)
         assert not result.is_valid
         assert any("shape" in e for e in result.errors)
 
@@ -691,10 +575,7 @@ class TestSpinesGroup:
         filepath = tmp_path / "test.h5"
         write_minimal_valid_file(filepath)
         with h5py.File(filepath, "a") as h5:
-            mesh_path = (
-                f"{GRP_SPINES}/{GRP_MESHES}"
-                f"/{SPINE_MORPH_NAME}"
-            )
+            mesh_path = f"{GRP_SPINES}/{GRP_MESHES}/{SPINE_MORPH_NAME}"
             grp = h5[mesh_path]
             del grp[GRP_OFFSETS]
             # Non-decreasing violation: 6 -> 3
@@ -706,23 +587,16 @@ class TestSpinesGroup:
                 ),
                 compression="gzip",
             )
-        result = validate_morph_with_spines_file(
-            filepath, check_data_integrity=True
-        )
+        result = validate_morph_with_spines_file(filepath, check_data_integrity=True)
         assert not result.is_valid
-        assert any(
-            "non-decreasing" in e for e in result.errors
-        )
+        assert any("non-decreasing" in e for e in result.errors)
 
     def test_offsets_first_row_not_zero(self, tmp_path):
         """Offsets with non-zero first row produces warning."""
         filepath = tmp_path / "test.h5"
         write_minimal_valid_file(filepath)
         with h5py.File(filepath, "a") as h5:
-            mesh_path = (
-                f"{GRP_SPINES}/{GRP_MESHES}"
-                f"/{SPINE_MORPH_NAME}"
-            )
+            mesh_path = f"{GRP_SPINES}/{GRP_MESHES}/{SPINE_MORPH_NAME}"
             grp = h5[mesh_path]
             del grp[GRP_OFFSETS]
             # First row not zero
@@ -744,47 +618,33 @@ class TestSpinesGroup:
             del grp[GRP_TRIANGLES]
             grp.create_dataset(
                 GRP_TRIANGLES,
-                data=np.array(
-                    [[0, 1, 2]] * 4, dtype=np.int32
-                ),
+                data=np.array([[0, 1, 2]] * 4, dtype=np.int32),
                 compression="gzip",
             )
-        result = validate_morph_with_spines_file(
-            filepath, check_data_integrity=True
-        )
+        result = validate_morph_with_spines_file(filepath, check_data_integrity=True)
         assert result.is_valid
         assert any("first row" in w for w in result.warnings)
 
-    def test_skeleton_entry_is_dataset_not_group(
-        self, tmp_path
-    ):
+    def test_skeleton_entry_is_dataset_not_group(self, tmp_path):
         """A dataset instead of group under skeletons errors."""
         filepath = tmp_path / "test.h5"
         write_minimal_valid_file(filepath)
         with h5py.File(filepath, "a") as h5:
-            skel_parent = h5[
-                f"{GRP_SPINES}/{GRP_SKELETONS}"
-            ]
+            skel_parent = h5[f"{GRP_SPINES}/{GRP_SKELETONS}"]
             del skel_parent[SPINE_MORPH_NAME]
-            skel_parent.create_dataset(
-                SPINE_MORPH_NAME, data=np.zeros(3)
-            )
+            skel_parent.create_dataset(SPINE_MORPH_NAME, data=np.zeros(3))
         result = validate_morph_with_spines_file(filepath)
         assert not result.is_valid
         assert any("not a group" in e for e in result.errors)
 
-    def test_mesh_entry_is_dataset_not_group(
-        self, tmp_path
-    ):
+    def test_mesh_entry_is_dataset_not_group(self, tmp_path):
         """A dataset instead of group under meshes errors."""
         filepath = tmp_path / "test.h5"
         write_minimal_valid_file(filepath)
         with h5py.File(filepath, "a") as h5:
             mesh_parent = h5[f"{GRP_SPINES}/{GRP_MESHES}"]
             del mesh_parent[SPINE_MORPH_NAME]
-            mesh_parent.create_dataset(
-                SPINE_MORPH_NAME, data=np.zeros(3)
-            )
+            mesh_parent.create_dataset(SPINE_MORPH_NAME, data=np.zeros(3))
         result = validate_morph_with_spines_file(filepath)
         assert not result.is_valid
         assert any("not a group" in e for e in result.errors)
@@ -794,20 +654,13 @@ class TestSpinesGroup:
         filepath = tmp_path / "test.h5"
         write_minimal_valid_file(filepath)
         with h5py.File(filepath, "a") as h5:
-            mesh_path = (
-                f"{GRP_SPINES}/{GRP_MESHES}"
-                f"/{SPINE_MORPH_NAME}"
-            )
+            mesh_path = f"{GRP_SPINES}/{GRP_MESHES}/{SPINE_MORPH_NAME}"
             grp = h5[mesh_path]
             del grp[GRP_VERTICES]
             data = np.ones((9, 3), dtype=np.float32)
             data[0, 0] = np.inf
-            grp.create_dataset(
-                GRP_VERTICES, data=data, compression="gzip"
-            )
-        result = validate_morph_with_spines_file(
-            filepath, check_data_integrity=True
-        )
+            grp.create_dataset(GRP_VERTICES, data=data, compression="gzip")
+        result = validate_morph_with_spines_file(filepath, check_data_integrity=True)
         assert not result.is_valid
         assert any("Inf" in e for e in result.errors)
 
@@ -816,10 +669,7 @@ class TestSpinesGroup:
         filepath = tmp_path / "test.h5"
         write_minimal_valid_file(filepath)
         with h5py.File(filepath, "a") as h5:
-            mesh_path = (
-                f"{GRP_SPINES}/{GRP_MESHES}"
-                f"/{SPINE_MORPH_NAME}"
-            )
+            mesh_path = f"{GRP_SPINES}/{GRP_MESHES}/{SPINE_MORPH_NAME}"
             grp = h5[mesh_path]
             del grp[GRP_OFFSETS]
             grp.create_dataset(
@@ -827,23 +677,16 @@ class TestSpinesGroup:
                 data=np.array([[0, 0]], dtype=np.int32),
                 compression="gzip",
             )
-        result = validate_morph_with_spines_file(
-            filepath, check_data_integrity=True
-        )
+        result = validate_morph_with_spines_file(filepath, check_data_integrity=True)
         assert not result.is_valid
-        assert any(
-            "at least 2 rows" in e for e in result.errors
-        )
+        assert any("at least 2 rows" in e for e in result.errors)
 
     def test_triangle_offsets_non_decreasing(self, tmp_path):
         """Triangle offsets going backwards reports error."""
         filepath = tmp_path / "test.h5"
         write_minimal_valid_file(filepath)
         with h5py.File(filepath, "a") as h5:
-            mesh_path = (
-                f"{GRP_SPINES}/{GRP_MESHES}"
-                f"/{SPINE_MORPH_NAME}"
-            )
+            mesh_path = f"{GRP_SPINES}/{GRP_MESHES}/{SPINE_MORPH_NAME}"
             grp = h5[mesh_path]
             del grp[GRP_OFFSETS]
             # Triangle offsets (col 1) go backwards
@@ -855,13 +698,9 @@ class TestSpinesGroup:
                 ),
                 compression="gzip",
             )
-        result = validate_morph_with_spines_file(
-            filepath, check_data_integrity=True
-        )
+        result = validate_morph_with_spines_file(filepath, check_data_integrity=True)
         assert not result.is_valid
-        assert any(
-            "non-decreasing" in e for e in result.errors
-        )
+        assert any("non-decreasing" in e for e in result.errors)
 
 
 class TestSomaGroup:
@@ -875,20 +714,14 @@ class TestSomaGroup:
             del h5["soma"]
         result = validate_morph_with_spines_file(filepath)
         assert result.is_valid
-        assert any(
-            "soma" in i and "not present" in i
-            for i in result.info
-        )
+        assert any("soma" in i and "not present" in i for i in result.info)
 
     def test_soma_missing_vertices(self, tmp_path):
         """Missing vertices in soma mesh reports error."""
         filepath = tmp_path / "test.h5"
         write_minimal_valid_file(filepath)
         with h5py.File(filepath, "a") as h5:
-            del h5[
-                f"soma/{GRP_MESHES}/{NEURON_NAME}"
-                f"/{GRP_VERTICES}"
-            ]
+            del h5[f"soma/{GRP_MESHES}/{NEURON_NAME}/{GRP_VERTICES}"]
         result = validate_morph_with_spines_file(filepath)
         assert not result.is_valid
         assert any("vertices" in e for e in result.errors)
@@ -898,48 +731,30 @@ class TestSomaGroup:
         filepath = tmp_path / "test.h5"
         write_minimal_valid_file(filepath)
         with h5py.File(filepath, "a") as h5:
-            soma_path = (
-                f"soma/{GRP_MESHES}/{NEURON_NAME}"
-            )
+            soma_path = f"soma/{GRP_MESHES}/{NEURON_NAME}"
             del h5[f"{soma_path}/{GRP_VERTICES}"]
             h5[soma_path].create_dataset(
                 GRP_VERTICES,
                 data=np.ones((4, 2), dtype=np.float32),
             )
-        result = validate_morph_with_spines_file(
-            filepath, check_data_integrity=True
-        )
+        result = validate_morph_with_spines_file(filepath, check_data_integrity=True)
         assert not result.is_valid
-        assert any(
-            "soma" in e
-            and "vertices" in e
-            and "shape (N, 3)" in e
-            for e in result.errors
-        )
+        assert any("soma" in e and "vertices" in e and "shape (N, 3)" in e for e in result.errors)
 
     def test_soma_triangles_wrong_shape(self, tmp_path):
         """Soma triangles with shape (2,4) reports error."""
         filepath = tmp_path / "test.h5"
         write_minimal_valid_file(filepath)
         with h5py.File(filepath, "a") as h5:
-            soma_path = (
-                f"soma/{GRP_MESHES}/{NEURON_NAME}"
-            )
+            soma_path = f"soma/{GRP_MESHES}/{NEURON_NAME}"
             del h5[f"{soma_path}/{GRP_TRIANGLES}"]
             h5[soma_path].create_dataset(
                 GRP_TRIANGLES,
                 data=np.ones((2, 4), dtype=np.int32),
             )
-        result = validate_morph_with_spines_file(
-            filepath, check_data_integrity=True
-        )
+        result = validate_morph_with_spines_file(filepath, check_data_integrity=True)
         assert not result.is_valid
-        assert any(
-            "soma" in e
-            and "triangles" in e
-            and "shape (M, 3)" in e
-            for e in result.errors
-        )
+        assert any("soma" in e and "triangles" in e and "shape (M, 3)" in e for e in result.errors)
 
 
 class TestCrossGroupIntegrity:
@@ -954,17 +769,11 @@ class TestCrossGroupIntegrity:
                 f"{GRP_MORPH}/{NEURON_NAME}",
                 f"{GRP_MORPH}/other_neuron",
             )
-        result = validate_morph_with_spines_file(
-            filepath, check_data_integrity=True
-        )
+        result = validate_morph_with_spines_file(filepath, check_data_integrity=True)
         assert not result.is_valid
-        assert any(
-            "not in /morphology" in e for e in result.errors
-        )
+        assert any("not in /morphology" in e for e in result.errors)
 
-    def test_spine_id_exceeds_skeleton_root_sections(
-        self, tmp_path
-    ):
+    def test_spine_id_exceeds_skeleton_root_sections(self, tmp_path):
         """spine_id exceeding root sections reports error."""
         filepath = tmp_path / "test.h5"
         write_minimal_valid_file(filepath)
@@ -975,14 +784,9 @@ class TestCrossGroupIntegrity:
                 "spine_id",
                 data=np.array([0, 1, 99], dtype=np.uint32),
             )
-        result = validate_morph_with_spines_file(
-            filepath, check_data_integrity=True
-        )
+        result = validate_morph_with_spines_file(filepath, check_data_integrity=True)
         assert not result.is_valid
-        assert any(
-            "spine_id=99" in e and "skeleton" in e
-            for e in result.errors
-        )
+        assert any("spine_id=99" in e and "skeleton" in e for e in result.errors)
 
     def test_spine_id_exceeds_mesh_offsets(self, tmp_path):
         """spine_id exceeding mesh offset count errors."""
@@ -990,10 +794,7 @@ class TestCrossGroupIntegrity:
         write_minimal_valid_file(filepath)
         with h5py.File(filepath, "a") as h5:
             # Add more root sections to skeleton (5 roots)
-            skel_path = (
-                f"{GRP_SPINES}/{GRP_SKELETONS}"
-                f"/{SPINE_MORPH_NAME}"
-            )
+            skel_path = f"{GRP_SPINES}/{GRP_SKELETONS}/{SPINE_MORPH_NAME}"
             skel_grp = h5[skel_path]
             del skel_grp["structure"]
             skel_grp.create_dataset(
@@ -1016,37 +817,22 @@ class TestCrossGroupIntegrity:
                 "spine_id",
                 data=np.array([0, 1, 4], dtype=np.uint32),
             )
-        result = validate_morph_with_spines_file(
-            filepath, check_data_integrity=True
-        )
+        result = validate_morph_with_spines_file(filepath, check_data_integrity=True)
         assert not result.is_valid
-        assert any(
-            "spine_id=4" in e and "mesh" in e
-            for e in result.errors
-        )
+        assert any("spine_id=4" in e and "mesh" in e for e in result.errors)
 
-    def test_spine_morphology_missing_mesh_warning(
-        self, tmp_path
-    ):
+    def test_spine_morphology_missing_mesh_warning(self, tmp_path):
         """spine_morphology referencing missing mesh warns."""
         filepath = tmp_path / "test.h5"
         write_minimal_valid_file(filepath)
         with h5py.File(filepath, "a") as h5:
-            mesh_path = (
-                f"{GRP_SPINES}/{GRP_MESHES}"
-                f"/{SPINE_MORPH_NAME}"
-            )
+            mesh_path = f"{GRP_SPINES}/{GRP_MESHES}/{SPINE_MORPH_NAME}"
             h5.move(
                 mesh_path,
                 f"{GRP_SPINES}/{GRP_MESHES}/other_name",
             )
-        result = validate_morph_with_spines_file(
-            filepath, check_data_integrity=True
-        )
-        assert any(
-            "spine_morphology" in w and "meshes" in w
-            for w in result.warnings
-        )
+        result = validate_morph_with_spines_file(filepath, check_data_integrity=True)
+        assert any("spine_morphology" in w and "meshes" in w for w in result.warnings)
 
 
 class TestValidationResult:
