@@ -155,6 +155,8 @@ def write_minimal_valid_file(filepath):
         soma_grp.create_dataset(GRP_VERTICES, data=SOMA_VERTICES)
         soma_grp.create_dataset(GRP_TRIANGLES, data=SOMA_TRIANGLES)
 
+    return filepath
+
 
 @pytest.fixture
 def minimal_valid_file(tmp_path):
