@@ -101,36 +101,24 @@ def _validate_sources(
     rename_map: dict[tuple[Path, str], str],
 ) -> None:
     """Validate source file format and check for destination name collisions."""
+    from morph_spines.utils.morph_spine_validator import (
+        validate_morph_with_spines_file,
+    )
+
     morph_dest_names: list[str] = []
     spine_dest_names: list[str] = []
     valid_keys: set[tuple[Path, str]] = set()
 
     for src_path in source_files:
+        # Use the file validator for structural checks
+        result = validate_morph_with_spines_file(src_path)
+        if not result.is_valid:
+            raise ValueError(
+                f"Invalid file {src_path}:\n" + "\n".join(f"  - {e}" for e in result.errors)
+            )
+
         with h5py.File(src_path, "r") as h5:
-            if GRP_MORPH not in h5:
-                raise ValueError(f"Invalid file: No /{GRP_MORPH} group in {src_path}")
-
-            skeletons_grp = h5.get(f"{GRP_SPINES}/{GRP_SKELETONS}")
-            if skeletons_grp is None:
-                raise ValueError(
-                    f"Invalid file: No /{GRP_SPINES}/{GRP_SKELETONS} group in {src_path}"
-                )
-
-            for morph_key in h5[GRP_MORPH].keys():
-                # Spines table must exist
-                spine_morph_path = f"{GRP_EDGES}/{morph_key}/{COL_SPINE_MORPH}"
-                if spine_morph_path not in h5:
-                    raise ValueError(f"Invalid file: No /{spine_morph_path} dataset in {src_path}")
-
-                # All referenced spines groups must exist in the file
-                raw = h5[spine_morph_path][:]
-                referenced = {v.decode() if isinstance(v, bytes) else str(v) for v in raw}
-                missing = referenced - set(skeletons_grp.keys())
-                if missing:
-                    raise ValueError(
-                        f"Spines groups {missing} referenced by '{morph_key}' "
-                        f"not found in /{GRP_SPINES}/{GRP_SKELETONS} of {src_path}"
-                    )
+            skeletons_grp = h5[f"{GRP_SPINES}/{GRP_SKELETONS}"]
 
             # Collect valid keys and destination names for this file
             for k in h5[GRP_MORPH].keys():
@@ -144,7 +132,7 @@ def _validate_sources(
     _check_duplicates(morph_dest_names, "morphology")
     _check_duplicates(spine_dest_names, "spines library")
 
-    # Warn about unused rename_map entries (do not match any name in the source files)
+    # Warn about unused rename_map entries
     unused = set(rename_map.keys()) - valid_keys
     if unused:
         warnings.warn(

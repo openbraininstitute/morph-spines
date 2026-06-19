@@ -9,7 +9,8 @@ Structure checks (always performed):
     - /morphology/{name}: is a group with 'points' and 'structure' datasets.
     - /edges/{name}: is a group with 'metadata' subgroup containing 'version'
       attribute; 'version' is (1, 0); all mandatory column datasets present
-      (spines table).
+      (spines table); spine_morphology references existing /spines/skeletons
+      groups.
     - /spines/skeletons/{name}: is a group with 'points' and 'structure' datasets.
     - /spines/meshes/{name} (optional): if present, it contains 'vertices', 'triangles'
       and 'offsets' datasets.
@@ -30,7 +31,6 @@ Data integrity checks (when check_data_integrity=True):
     - /edges spine_type values are valid SpineType enum values (if present).
     - /edges spine_volume values > 0 (if present).
     - /edges spine_neck_diameter values > 0 (if present).
-    - /edges spine_morphology references existing /spines/skeletons groups.
     - /spines/skeletons points: shape (N, 4), float32 dtype, no NaN/Inf, non-empty.
     - /spines/skeletons structure: shape (M, 3), non-empty.
     - /spines/meshes vertices: shape (N, 3), no NaN/Inf.
@@ -376,6 +376,23 @@ def _validate_edges_group(edges_grp: h5py.Group, check_data_integrity: bool) -> 
                 f"/edges/{name}: unknown column datasets (not in spec): {sorted(unknown_cols)}"
             )
 
+        # Check spine_morphology references existing /spines/skeletons groups
+        if "spine_morphology" in dataset_keys:
+            spine_morph_dset = item["spine_morphology"]
+            if isinstance(spine_morph_dset, h5py.Dataset):
+                h5_file = item.file
+                skeletons_path = f"{GRP_SPINES}/{GRP_SKELETONS}"
+                if skeletons_path in h5_file:
+                    skeleton_names = set(h5_file[skeletons_path].keys())
+                    values = set(spine_morph_dset[:].astype(str))
+                    missing = values - skeleton_names
+                    if missing:
+                        result.add_error(
+                            f"/edges/{name}/spine_morphology: "
+                            f"references groups not in "
+                            f"/{skeletons_path}: {sorted(missing)}"
+                        )
+
         if check_data_integrity:
             _validate_edges_data_integrity(item, name, result)
 
@@ -463,20 +480,6 @@ def _validate_edges_data_integrity(
         invalid_types = actual_types - valid_types
         if invalid_types:
             result.add_error(f"/edges/{name}/spine_type: unknown values: {sorted(invalid_types)}")
-
-    # Validate spine_morphology references existing /spines/skeletons subgroups
-    if "spine_morphology" in dataset_keys:
-        spine_morph_values = set(spine_table_grp["spine_morphology"][:].astype(str))
-        h5_file = spine_table_grp.file
-        skeletons_path = f"{GRP_SPINES}/{GRP_SKELETONS}"
-        if skeletons_path in h5_file:
-            skeleton_names = set(h5_file[skeletons_path].keys())
-            missing = spine_morph_values - skeleton_names
-            if missing:
-                result.add_error(
-                    f"/edges/{name}/spine_morphology: references groups not in "
-                    f"/{skeletons_path}: {sorted(missing)}"
-                )
 
 
 def _validate_spines_group(spines_grp: h5py.Group, check_data_integrity: bool) -> ValidationResult:
