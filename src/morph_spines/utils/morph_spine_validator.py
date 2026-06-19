@@ -10,13 +10,14 @@ Structure checks (always performed):
     - /edges/{name}: is a group with 'metadata' subgroup containing 'version'
       attribute; 'version' is (1, 0); all mandatory column datasets present
       (spines table); spine_morphology references existing /spines/skeletons
-      groups.
+      groups (error) and /spines/meshes groups if present (warning).
     - /spines/skeletons/{name}: is a group with 'points' and 'structure' datasets.
     - /spines/meshes/{name} (optional): if present, it contains 'vertices', 'triangles'
       and 'offsets' datasets.
     - /soma/meshes/{name} (optional): if present, it contains 'vertices' and 'triangles'
       datasets.
     - Warnings for unexpected top-level groups or unknown spine table columns.
+    - /edges neuron names must exist in /morphology.
 
 Data integrity checks (when check_data_integrity=True):
     - /morphology points: shape (N, 4), float32 dtype, no NaN/Inf, non-empty.
@@ -40,8 +41,6 @@ Data integrity checks (when check_data_integrity=True):
     - /soma/meshes vertices: shape (N, 3), no NaN/Inf.
     - /soma/meshes triangles: shape (M, 3), no negative indices,
       indices < vertex count.
-    - Cross-group: /edges neuron names subgroups exist in /morphology.
-    - Cross-group: spine_morphology values reference existing /spines/meshes groups.
     - Cross-group: spine_id values are valid indices into skeleton root sections
       and mesh offsets.
     - Cross-group: afferent_section_id values are valid section indices in
@@ -240,7 +239,17 @@ def validate_morph_with_spines_file(
         if unexpected:
             result.add_warning(f"Unexpected top-level groups: {sorted(unexpected)}")
 
-        # Cross-group integrity (only with data integrity checks)
+        # /edges neuron names must exist in /morphology
+        if GRP_MORPH in top_keys and GRP_EDGES in top_keys:
+            morph_names = set(h5[GRP_MORPH].keys())
+            edges_names = set(h5[GRP_EDGES].keys())
+            orphan = edges_names - morph_names
+            if orphan:
+                result.add_error(
+                    f"/edges references neuron(s) not in /morphology: {sorted(orphan)}"
+                )
+
+        # Cross-group data integrity (only with data integrity checks)
         if check_data_integrity and result.is_valid:
             result.merge(_validate_cross_group_integrity(h5))
 
@@ -381,16 +390,26 @@ def _validate_edges_group(edges_grp: h5py.Group, check_data_integrity: bool) -> 
             spine_morph_dset = item["spine_morphology"]
             if isinstance(spine_morph_dset, h5py.Dataset):
                 h5_file = item.file
+                values = set(spine_morph_dset[:].astype(str))
+
                 skeletons_path = f"{GRP_SPINES}/{GRP_SKELETONS}"
                 if skeletons_path in h5_file:
-                    skeleton_names = set(h5_file[skeletons_path].keys())
-                    values = set(spine_morph_dset[:].astype(str))
-                    missing = values - skeleton_names
+                    missing = values - set(h5_file[skeletons_path].keys())
                     if missing:
                         result.add_error(
                             f"/edges/{name}/spine_morphology: "
                             f"references groups not in "
                             f"/{skeletons_path}: {sorted(missing)}"
+                        )
+
+                meshes_path = f"{GRP_SPINES}/{GRP_MESHES}"
+                if meshes_path in h5_file:
+                    missing = values - set(h5_file[meshes_path].keys())
+                    if missing:
+                        result.add_warning(
+                            f"/edges/{name}/spine_morphology: "
+                            f"references groups not in "
+                            f"/{meshes_path}: {sorted(missing)}"
                         )
 
         if check_data_integrity:
@@ -720,9 +739,6 @@ def _validate_cross_group_integrity(h5: h5py.File) -> ValidationResult:
     """Validate referential integrity across groups.
 
     Checks that:
-    - Neuron names in /edges reference existing entries in /morphology.
-    - spine_morphology values in /edges reference existing /spines/meshes subgroups
-      (if meshes are present).
     - spine_id values in /edges are valid indices into the corresponding
       /spines/skeletons (root section count) and /spines/meshes (offset count).
     - afferent_section_id values in /edges are valid section indices in
@@ -730,42 +746,7 @@ def _validate_cross_group_integrity(h5: h5py.File) -> ValidationResult:
     """
     result = ValidationResult()
 
-    # Neuron names consistency
-    morph_names = set(h5[GRP_MORPH].keys()) if GRP_MORPH in h5 else set()
     edges_names = set(h5[GRP_EDGES].keys()) if GRP_EDGES in h5 else set()
-    mesh_names = (
-        set(h5[f"{GRP_SPINES}/{GRP_MESHES}"].keys())
-        if GRP_SPINES in h5 and GRP_MESHES in h5[GRP_SPINES]
-        else set()
-    )
-
-    # /edges neuron names should exist in /morphology
-    orphan_edges = edges_names - morph_names
-    if orphan_edges:
-        result.add_error(f"/edges references neuron(s) not in /morphology: {sorted(orphan_edges)}")
-
-    # Check spine_morphology references in /edges point to valid meshes
-    # (skeleton references are already checked per-edge in _validate_edges_data_integrity)
-    if mesh_names:
-        for edge_name in edges_names:
-            edge_grp = h5[GRP_EDGES][edge_name]
-            if not isinstance(edge_grp, h5py.Group):
-                continue
-            if "spine_morphology" not in edge_grp:
-                continue
-
-            spine_morph_dset = edge_grp["spine_morphology"]
-            if not isinstance(spine_morph_dset, h5py.Dataset):
-                continue
-
-            spine_morph_values = set(spine_morph_dset[:].astype(str))
-
-            missing_meshes = spine_morph_values - mesh_names
-            if missing_meshes:
-                result.add_warning(
-                    f"/edges/{edge_name}/spine_morphology references mesh groups "
-                    f"not in /spines/meshes: {sorted(missing_meshes)}"
-                )
 
     # Check that spine_id values are valid indices into skeletons and meshes
     for edge_name in edges_names:
