@@ -422,6 +422,25 @@ class TestEdgesGroup:
         assert not result.is_valid
         assert any("version" in e for e in result.errors)
 
+    def test_spine_type_invalid_values(self, tmp_path):
+        """Invalid spine_type values report error."""
+        filepath = tmp_path / "test.h5"
+        write_minimal_valid_file(filepath)
+        with h5py.File(filepath, "a") as h5:
+            grp = h5[f"{GRP_EDGES}/{NEURON_NAME}"]
+            dt = h5py.string_dtype(encoding="utf-8")
+            grp.create_dataset(
+                "spine_type",
+                data=np.array(
+                    ["thin", "invalid_type", "mushroom"],
+                    dtype=object,
+                ),
+                dtype=dt,
+            )
+        result = validate_morph_with_spines_file(filepath, check_data_integrity=True)
+        assert not result.is_valid
+        assert any("invalid_type" in e for e in result.errors)
+
 
 class TestSpinesGroup:
     """Tests for /spines group validation."""
@@ -833,6 +852,23 @@ class TestCrossGroupIntegrity:
             )
         result = validate_morph_with_spines_file(filepath, check_data_integrity=True)
         assert any("spine_morphology" in w and "meshes" in w for w in result.warnings)
+
+    def test_afferent_section_id_exceeds_morphology(self, tmp_path):
+        """afferent_section_id exceeding section count errors."""
+        filepath = tmp_path / "test.h5"
+        write_minimal_valid_file(filepath)
+        with h5py.File(filepath, "a") as h5:
+            # Morphology has 1 section (structure has 1 row)
+            # Set afferent_section_id to 5 which is out of bounds
+            grp = h5[f"{GRP_EDGES}/{NEURON_NAME}"]
+            del grp["afferent_section_id"]
+            grp.create_dataset(
+                "afferent_section_id",
+                data=np.array([0, 0, 5], dtype=np.uint32),
+            )
+        result = validate_morph_with_spines_file(filepath, check_data_integrity=True)
+        assert not result.is_valid
+        assert any("afferent_section_id" in e for e in result.errors)
 
 
 class TestValidationResult:

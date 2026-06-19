@@ -26,6 +26,10 @@ Data integrity checks (when check_data_integrity=True):
     - /edges afferent_section_pos values in [0, 1].
     - /edges spine_length values > 0.
     - /edges afferent_segment_offset values >= 0.
+    - /edges afferent_segment_id values >= 0.
+    - /edges spine_type values are valid SpineType enum values (if present).
+    - /edges spine_volume values > 0 (if present).
+    - /edges spine_neck_diameter values > 0 (if present).
     - /edges spine_morphology references existing /spines/skeletons groups.
     - /spines/skeletons points: shape (N, 4), float32 dtype, no NaN/Inf, non-empty.
     - /spines/skeletons structure: shape (M, 3), non-empty.
@@ -40,6 +44,8 @@ Data integrity checks (when check_data_integrity=True):
     - Cross-group: spine_morphology values reference existing /spines/meshes groups.
     - Cross-group: spine_id values are valid indices into skeleton root sections
       and mesh offsets.
+    - Cross-group: afferent_section_id values are valid section indices in
+      /morphology/{name}/structure.
 """
 
 from __future__ import annotations
@@ -423,6 +429,37 @@ def _validate_edges_data_integrity(
         if n_negative > 0:
             result.add_error(f"/edges/{name}/afferent_segment_offset: {n_negative} negative values")
 
+    # Validate afferent_segment_id >= 0
+    if "afferent_segment_id" in dataset_keys:
+        data = spine_table_grp["afferent_segment_id"][:]
+        n_negative = int(np.sum(data < 0))
+        if n_negative > 0:
+            result.add_error(f"/edges/{name}/afferent_segment_id: {n_negative} negative values")
+
+    # Validate spine_type contains only known values (optional column)
+    if "spine_type" in dataset_keys:
+        from morph_spines.core.spine_type import SpineType
+
+        valid_types = {t.value for t in SpineType}
+        actual_types = set(spine_table_grp["spine_type"][:].astype(str))
+        invalid_types = actual_types - valid_types
+        if invalid_types:
+            result.add_error(f"/edges/{name}/spine_type: unknown values: {sorted(invalid_types)}")
+
+    # Validate spine_volume > 0 (optional column)
+    if "spine_volume" in dataset_keys:
+        data = spine_table_grp["spine_volume"][:]
+        n_invalid = int(np.sum(data <= 0))
+        if n_invalid > 0:
+            result.add_error(f"/edges/{name}/spine_volume: {n_invalid} values <= 0")
+
+    # Validate spine_neck_diameter > 0 (optional column)
+    if "spine_neck_diameter" in dataset_keys:
+        data = spine_table_grp["spine_neck_diameter"][:]
+        n_invalid = int(np.sum(data <= 0))
+        if n_invalid > 0:
+            result.add_error(f"/edges/{name}/spine_neck_diameter: {n_invalid} values <= 0")
+
     # Validate spine_morphology references existing /spines/skeletons subgroups
     if "spine_morphology" in dataset_keys:
         spine_morph_values = set(spine_table_grp["spine_morphology"][:].astype(str))
@@ -681,6 +718,8 @@ def _validate_cross_group_integrity(h5: h5py.File) -> ValidationResult:
       (if meshes are present).
     - spine_id values in /edges are valid indices into the corresponding
       /spines/skeletons (root section count) and /spines/meshes (offset count).
+    - afferent_section_id values in /edges are valid section indices in
+      /morphology/{name}/structure.
     """
     result = ValidationResult()
 
@@ -777,5 +816,34 @@ def _validate_cross_group_integrity(h5: h5py.File) -> ValidationResult:
                                 f"spine_morphology='{spine_morph}' exceeds mesh "
                                 f"offset count ({n_mesh_spines})"
                             )
+
+    # Check afferent_section_id references valid sections in /morphology
+    for edge_name in edges_names:
+        edge_grp = h5[GRP_EDGES][edge_name]
+        if not isinstance(edge_grp, h5py.Group):
+            continue
+        if "afferent_section_id" not in edge_grp:
+            continue
+
+        morph_path = f"{GRP_MORPH}/{edge_name}"
+        if morph_path not in h5:
+            continue  # already reported as orphan edge
+
+        morph_grp = h5[morph_path]
+        if "structure" not in morph_grp:
+            continue
+
+        structure = morph_grp["structure"]
+        if not isinstance(structure, h5py.Dataset) or structure.ndim != 2:
+            continue
+
+        n_sections = structure.shape[0]
+        section_ids = edge_grp["afferent_section_id"][:]
+        max_section_id = int(np.max(section_ids))
+        if max_section_id >= n_sections:
+            result.add_error(
+                f"/edges/{edge_name}: afferent_section_id={max_section_id} "
+                f"exceeds morphology section count ({n_sections})"
+            )
 
     return result
