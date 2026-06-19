@@ -75,6 +75,39 @@ from morph_spines.core.h5_schema import (
 )
 
 
+def check_column_values(col_name: str, data) -> list[str]:
+    """Check numeric column values for known constraints.
+
+    Args:
+        col_name: Name of the spine table column.
+        data: Array-like of values (numpy array or pandas Series).
+
+    Returns:
+        A list of error message strings. Empty if all values are valid.
+    """
+    arr = np.asarray(data)
+    errors: list[str] = []
+
+    if col_name == "afferent_section_pos":
+        n = int(np.sum((arr < 0) | (arr > 1)))
+        if n > 0:
+            errors.append(f"{col_name}: {n} values not in [0, 1]")
+    elif col_name == "spine_length":
+        n = int(np.sum(arr <= 0))
+        if n > 0:
+            errors.append(f"{col_name}: {n} values not > 0")
+    elif col_name in ("afferent_segment_offset", "afferent_segment_id"):
+        n = int(np.sum(arr < 0))
+        if n > 0:
+            errors.append(f"{col_name}: {n} values not >= 0")
+    elif col_name in ("spine_volume", "spine_neck_diameter"):
+        n = int(np.sum(arr <= 0))
+        if n > 0:
+            errors.append(f"{col_name}: {n} values not > 0")
+
+    return errors
+
+
 @dataclass
 class ValidationResult:
     """Container for validation results.
@@ -406,35 +439,20 @@ def _validate_edges_data_integrity(
                     f"/edges/{name}/{col_name}: expected integer type, got dtype '{item.dtype}'"
                 )
 
-    # Validate afferent_section_pos is in [0, 1]
-    if "afferent_section_pos" in dataset_keys:
-        data = spine_table_grp["afferent_section_pos"][:]
-        out_of_range = int(np.sum((data < 0) | (data > 1)))
-        if out_of_range > 0:
-            result.add_error(
-                f"/edges/{name}/afferent_section_pos: {out_of_range} values outside [0, 1]"
-            )
-
-    # Validate spine_length > 0
-    if "spine_length" in dataset_keys:
-        data = spine_table_grp["spine_length"][:]
-        n_invalid = int(np.sum(data <= 0))
-        if n_invalid > 0:
-            result.add_error(f"/edges/{name}/spine_length: {n_invalid} values <= 0")
-
-    # Validate afferent_segment_offset >= 0
-    if "afferent_segment_offset" in dataset_keys:
-        data = spine_table_grp["afferent_segment_offset"][:]
-        n_negative = int(np.sum(data < 0))
-        if n_negative > 0:
-            result.add_error(f"/edges/{name}/afferent_segment_offset: {n_negative} negative values")
-
-    # Validate afferent_segment_id >= 0
-    if "afferent_segment_id" in dataset_keys:
-        data = spine_table_grp["afferent_segment_id"][:]
-        n_negative = int(np.sum(data < 0))
-        if n_negative > 0:
-            result.add_error(f"/edges/{name}/afferent_segment_id: {n_negative} negative values")
+    # Validate column value ranges
+    _CHECKED_COLUMNS = (
+        "afferent_section_pos",
+        "spine_length",
+        "afferent_segment_offset",
+        "afferent_segment_id",
+        "spine_volume",
+        "spine_neck_diameter",
+    )
+    for col_name in _CHECKED_COLUMNS:
+        if col_name in dataset_keys:
+            data = spine_table_grp[col_name][:]
+            for err in check_column_values(col_name, data):
+                result.add_error(f"/edges/{name}/{err}")
 
     # Validate spine_type contains only known values (optional column)
     if "spine_type" in dataset_keys:
@@ -445,20 +463,6 @@ def _validate_edges_data_integrity(
         invalid_types = actual_types - valid_types
         if invalid_types:
             result.add_error(f"/edges/{name}/spine_type: unknown values: {sorted(invalid_types)}")
-
-    # Validate spine_volume > 0 (optional column)
-    if "spine_volume" in dataset_keys:
-        data = spine_table_grp["spine_volume"][:]
-        n_invalid = int(np.sum(data <= 0))
-        if n_invalid > 0:
-            result.add_error(f"/edges/{name}/spine_volume: {n_invalid} values <= 0")
-
-    # Validate spine_neck_diameter > 0 (optional column)
-    if "spine_neck_diameter" in dataset_keys:
-        data = spine_table_grp["spine_neck_diameter"][:]
-        n_invalid = int(np.sum(data <= 0))
-        if n_invalid > 0:
-            result.add_error(f"/edges/{name}/spine_neck_diameter: {n_invalid} values <= 0")
 
     # Validate spine_morphology references existing /spines/skeletons subgroups
     if "spine_morphology" in dataset_keys:

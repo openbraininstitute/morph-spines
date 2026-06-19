@@ -215,9 +215,9 @@ class TestEdgesGroup:
     @pytest.mark.parametrize(
         "col,data,keyword",
         [
-            ("afferent_section_pos", np.array([0.5, 1.5, -0.1], dtype=np.float64), "outside"),
-            ("spine_length", np.array([1.0, 0.0, -0.5], dtype=np.float64), "<= 0"),
-            ("afferent_segment_offset", np.array([0.1, -0.5, 0.3], dtype=np.float64), "negative"),
+            ("afferent_section_pos", np.array([0.5, 1.5, -0.1], dtype=np.float64), "not in [0, 1]"),
+            ("spine_length", np.array([1.0, 0.0, -0.5], dtype=np.float64), "not > 0"),
+            ("afferent_segment_offset", np.array([0.1, -0.5, 0.3], dtype=np.float64), "not >= 0"),
         ],
         ids=["section-pos-range", "spine-length-zero", "offset-negative"],
     )
@@ -245,7 +245,7 @@ class TestEdgesGroup:
             grp.create_dataset(col, data=np.array([0.5, -0.1, 0.0], dtype=np.float64))
         r = validate_morph_with_spines_file(filepath, check_data_integrity=True)
         assert not r.is_valid
-        assert any(col in e and "<= 0" in e for e in r.errors)
+        assert any(col in e and "not > 0" in e for e in r.errors)
 
     @pytest.mark.parametrize(
         "col,bad_val,keyword",
