@@ -88,21 +88,41 @@ def check_column_values(col_name: str, data) -> list[str]:
     errors: list[str] = []
 
     if col_name == "afferent_section_pos":
-        n = int(np.sum((arr < 0) | (arr > 1)))
+        mask = (arr < 0) | (arr > 1)
+        n = int(np.sum(mask))
         if n > 0:
-            errors.append(f"{col_name}: {n} values not in [0, 1]")
+            first = int(np.argmax(mask))
+            errors.append(
+                f"{col_name}: {n} values not in [0, 1] "
+                f"(first at index {first})"
+            )
     elif col_name == "spine_length":
-        n = int(np.sum(arr <= 0))
+        mask = arr <= 0
+        n = int(np.sum(mask))
         if n > 0:
-            errors.append(f"{col_name}: {n} values not > 0")
+            first = int(np.argmax(mask))
+            errors.append(
+                f"{col_name}: {n} values not > 0 "
+                f"(first at index {first})"
+            )
     elif col_name in ("afferent_segment_offset", "afferent_segment_id"):
-        n = int(np.sum(arr < 0))
+        mask = arr < 0
+        n = int(np.sum(mask))
         if n > 0:
-            errors.append(f"{col_name}: {n} values not >= 0")
+            first = int(np.argmax(mask))
+            errors.append(
+                f"{col_name}: {n} values not >= 0 "
+                f"(first at index {first})"
+            )
     elif col_name in ("spine_volume", "spine_neck_diameter"):
-        n = int(np.sum(arr <= 0))
+        mask = arr <= 0
+        n = int(np.sum(mask))
         if n > 0:
-            errors.append(f"{col_name}: {n} values not > 0")
+            first = int(np.argmax(mask))
+            errors.append(
+                f"{col_name}: {n} values not > 0 "
+                f"(first at index {first})"
+            )
 
     return errors
 
@@ -293,9 +313,21 @@ def _validate_h5v1_morphology_subgroup(
                     result.add_warning(f"{path}/points: expected float32, got {points.dtype}")
                 data = points[:]
                 if np.any(np.isnan(data)):
-                    result.add_error(f"{path}/points: contains NaN values")
+                    nan_mask = np.any(np.isnan(data), axis=1)
+                    n = int(np.sum(nan_mask))
+                    first = int(np.argmax(nan_mask))
+                    result.add_error(
+                        f"{path}/points: {n} rows contain NaN "
+                        f"(first at index {first})"
+                    )
                 if np.any(np.isinf(data)):
-                    result.add_error(f"{path}/points: contains Inf values")
+                    inf_mask = np.any(np.isinf(data), axis=1)
+                    n = int(np.sum(inf_mask))
+                    first = int(np.argmax(inf_mask))
+                    result.add_error(
+                        f"{path}/points: {n} rows contain Inf "
+                        f"(first at index {first})"
+                    )
 
         if "structure" in keys:
             structure = grp["structure"]
@@ -466,9 +498,19 @@ def _validate_edges_data_integrity(
             else:
                 data = item[:]
                 if np.any(np.isnan(data)):
-                    result.add_error(f"/edges/{name}/{col_name}: contains NaN values")
+                    n = int(np.sum(np.isnan(data)))
+                    first = int(np.argmax(np.isnan(data)))
+                    result.add_error(
+                        f"/edges/{name}/{col_name}: "
+                        f"{n} NaN values (first at index {first})"
+                    )
                 if np.any(np.isinf(data)):
-                    result.add_error(f"/edges/{name}/{col_name}: contains Inf values")
+                    n = int(np.sum(np.isinf(data)))
+                    first = int(np.argmax(np.isinf(data)))
+                    result.add_error(
+                        f"/edges/{name}/{col_name}: "
+                        f"{n} Inf values (first at index {first})"
+                    )
         elif expected_kind in ("i", "ui"):
             if actual_kind not in ("i", "u", "f"):
                 result.add_error(
@@ -622,9 +664,21 @@ def _validate_mesh_datasets(
                 n_vertices = vertices.shape[0]
                 data = vertices[:]
                 if np.any(np.isnan(data)):
-                    result.add_error(f"{path}/vertices: contains NaN values")
+                    nan_mask = np.any(np.isnan(data), axis=1)
+                    n = int(np.sum(nan_mask))
+                    first = int(np.argmax(nan_mask))
+                    result.add_error(
+                        f"{path}/vertices: {n} rows contain NaN "
+                        f"(first at index {first})"
+                    )
                 elif np.any(np.isinf(data)):
-                    result.add_error(f"{path}/vertices: contains Inf values")
+                    inf_mask = np.any(np.isinf(data), axis=1)
+                    n = int(np.sum(inf_mask))
+                    first = int(np.argmax(inf_mask))
+                    result.add_error(
+                        f"{path}/vertices: {n} rows contain Inf "
+                        f"(first at index {first})"
+                    )
 
     if GRP_TRIANGLES in keys:
         triangles = grp[GRP_TRIANGLES]
