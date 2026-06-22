@@ -169,8 +169,11 @@ spine meshes will be stored under `/spines/meshes/01234`.
 The spine meshes are represented with three datasets: `/offsets`, `/triangles` and `/vertices`.
 These three datasets are the only ones stored compressed in the HDF5 file.
 
-The `/triangles` and `/vertices` datasets represent points and triangles in the 3D space in the
-same way as the `/soma/meshes` are described.
+The `/vertices` dataset contains all vertex positions (x, y, z) for all spines concatenated into a
+single flat array. Similarly, the `/triangles` dataset contains all triangle definitions for all
+spines concatenated into a single flat array. Within each spine's triangle slice, vertex indices
+are local (0-based relative to that spine's vertex slice, not global into the full `/vertices`
+array).
 
 The `/offsets` dataset is a list of pairs where each pair points at the first `vertex` and 
 `triangle` of each spine respectively. For easiness, if there are `NS` spines, there will be `NS+1`
@@ -183,6 +186,7 @@ Therefore, to get the mesh for the spine with ID `IDS`, we can do the following:
 ```python
 spine_vertices = neuron_vertices[neuron_offsets[IDS]:neuron_offsets[IDS+1]]
 spine_triangles = neuron_triangles[neuron_offsets[IDS]:neuron_offsets[IDS+1]]
+# spine_triangles contains indices into spine_vertices (not neuron_vertices)
 ```
 
 #### Head/neck triangle classification (optional)

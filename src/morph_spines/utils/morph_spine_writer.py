@@ -100,6 +100,23 @@ def validate_spine_table(spine_table: pd.DataFrame) -> None:
                 f"Unknown expected dtype kind '{expected_kind}' for column '{col_name}'"
             )
 
+    # Check value constraints for numeric columns (skip if dtype is wrong)
+    from morph_spines.utils.morph_spine_validator import check_column_values
+
+    _CHECKED_COLUMNS = (
+        "afferent_section_pos",
+        "spine_length",
+        "afferent_segment_offset",
+        "afferent_segment_id",
+        "spine_volume",
+        "spine_neck_diameter",
+    )
+    for col_name in _CHECKED_COLUMNS:
+        if col_name in spine_table.columns:
+            if spine_table[col_name].dtype.kind in ("f", "i", "u"):
+                for err in check_column_values(col_name, spine_table[col_name]):
+                    errors.append(f"Column '{col_name}': {err.split(': ', 1)[1]}")
+
     if errors:
         raise ValueError("Spine table validation failed:\n  - " + "\n  - ".join(errors))
 

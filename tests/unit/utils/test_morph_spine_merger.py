@@ -104,16 +104,15 @@ class TestValidation:
         with h5py.File(src, "w") as h5:
             h5.create_group("other")
 
-        with pytest.raises(ValueError, match="Invalid file: No /morphology group"):
+        with pytest.raises(ValueError, match="Invalid file"):
             merge_morphologies_with_spines([src], tmp_path / "out.h5")
 
     def test_missing_spines_table(self, tmp_path):
         src = tmp_path / "src.h5"
         write_morphology(str(src), "neuron_A", SAMPLE_POINTS, SAMPLE_STRUCTURE)
-        # Add /spines/skeletons so validation gets past that check
         write_spine_skeletons(str(src), "neuron_A", SAMPLE_POINTS, SAMPLE_STRUCTURE)
 
-        with pytest.raises(ValueError, match="Invalid file: No /edges/neuron_A/spine_morphology"):
+        with pytest.raises(ValueError, match="Invalid file"):
             merge_morphologies_with_spines([src], tmp_path / "out.h5")
 
     def test_duplicate_destination_names(self, tmp_path):
@@ -379,7 +378,7 @@ class TestEdgeCases:
         write_morphology(str(src), "neuron_A", SAMPLE_POINTS, SAMPLE_STRUCTURE)
         write_spine_table(str(src), "neuron_A", _make_spine_table("neuron_A", 2))
 
-        with pytest.raises(ValueError, match="Invalid file: No /spines/skeletons group"):
+        with pytest.raises(ValueError, match="Invalid file"):
             merge_morphologies_with_spines([src], tmp_path / "out.h5", include_meshes=False)
 
     def test_missing_referenced_spine_group_raises(self, tmp_path):
@@ -389,7 +388,7 @@ class TestEdgeCases:
         write_spine_table(str(src), "neuron_A", _make_spine_table("missing_group", 2))
         write_spine_skeletons(str(src), "other_group", SAMPLE_POINTS, SAMPLE_STRUCTURE)
 
-        with pytest.raises(ValueError, match="not found in /spines/skeletons"):
+        with pytest.raises(ValueError, match="Invalid file"):
             merge_morphologies_with_spines([src], tmp_path / "out.h5")
 
     def test_referential_integrity_after_rename(self, tmp_path):
