@@ -92,37 +92,25 @@ def check_column_values(col_name: str, data) -> list[str]:
         n = int(np.sum(mask))
         if n > 0:
             first = int(np.argmax(mask))
-            errors.append(
-                f"{col_name}: {n} values not in [0, 1] "
-                f"(first at index {first})"
-            )
+            errors.append(f"{col_name}: {n} values not in [0, 1] (first at index {first})")
     elif col_name == "spine_length":
         mask = arr <= 0
         n = int(np.sum(mask))
         if n > 0:
             first = int(np.argmax(mask))
-            errors.append(
-                f"{col_name}: {n} values not > 0 "
-                f"(first at index {first})"
-            )
+            errors.append(f"{col_name}: {n} values not > 0 (first at index {first})")
     elif col_name in ("afferent_segment_offset", "afferent_segment_id"):
         mask = arr < 0
         n = int(np.sum(mask))
         if n > 0:
             first = int(np.argmax(mask))
-            errors.append(
-                f"{col_name}: {n} values not >= 0 "
-                f"(first at index {first})"
-            )
+            errors.append(f"{col_name}: {n} values not >= 0 (first at index {first})")
     elif col_name in ("spine_volume", "spine_neck_diameter"):
         mask = arr <= 0
         n = int(np.sum(mask))
         if n > 0:
             first = int(np.argmax(mask))
-            errors.append(
-                f"{col_name}: {n} values not > 0 "
-                f"(first at index {first})"
-            )
+            errors.append(f"{col_name}: {n} values not > 0 (first at index {first})")
 
     return errors
 
@@ -317,16 +305,14 @@ def _validate_h5v1_morphology_subgroup(
                     n = int(np.sum(nan_mask))
                     first = int(np.argmax(nan_mask))
                     result.add_error(
-                        f"{path}/points: {n} rows contain NaN "
-                        f"(first at index {first})"
+                        f"{path}/points: {n} rows contain NaN (first at index {first})"
                     )
                 if np.any(np.isinf(data)):
                     inf_mask = np.any(np.isinf(data), axis=1)
                     n = int(np.sum(inf_mask))
                     first = int(np.argmax(inf_mask))
                     result.add_error(
-                        f"{path}/points: {n} rows contain Inf "
-                        f"(first at index {first})"
+                        f"{path}/points: {n} rows contain Inf (first at index {first})"
                     )
 
         if "structure" in keys:
@@ -501,15 +487,13 @@ def _validate_edges_data_integrity(
                     n = int(np.sum(np.isnan(data)))
                     first = int(np.argmax(np.isnan(data)))
                     result.add_error(
-                        f"/edges/{name}/{col_name}: "
-                        f"{n} NaN values (first at index {first})"
+                        f"/edges/{name}/{col_name}: {n} NaN values (first at index {first})"
                     )
                 if np.any(np.isinf(data)):
                     n = int(np.sum(np.isinf(data)))
                     first = int(np.argmax(np.isinf(data)))
                     result.add_error(
-                        f"/edges/{name}/{col_name}: "
-                        f"{n} Inf values (first at index {first})"
+                        f"/edges/{name}/{col_name}: {n} Inf values (first at index {first})"
                     )
         elif expected_kind in ("i", "ui"):
             if actual_kind not in ("i", "u", "f"):
@@ -668,16 +652,14 @@ def _validate_mesh_datasets(
                     n = int(np.sum(nan_mask))
                     first = int(np.argmax(nan_mask))
                     result.add_error(
-                        f"{path}/vertices: {n} rows contain NaN "
-                        f"(first at index {first})"
+                        f"{path}/vertices: {n} rows contain NaN (first at index {first})"
                     )
                 elif np.any(np.isinf(data)):
                     inf_mask = np.any(np.isinf(data), axis=1)
                     n = int(np.sum(inf_mask))
                     first = int(np.argmax(inf_mask))
                     result.add_error(
-                        f"{path}/vertices: {n} rows contain Inf "
-                        f"(first at index {first})"
+                        f"{path}/vertices: {n} rows contain Inf (first at index {first})"
                     )
 
     if GRP_TRIANGLES in keys:
